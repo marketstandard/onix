@@ -1,0 +1,4 @@
+table:
+  name: invoice_statuses
+  schema: public
+is_enum: true

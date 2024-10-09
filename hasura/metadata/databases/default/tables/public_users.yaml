@@ -1,0 +1,39 @@
+table:
+  name: users
+  schema: public
+array_relationships:
+  - name: accounts
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: accounts
+          schema: public
+  - name: checkoutSessions
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: checkout_sessions
+          schema: public
+  - name: invoices
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: invoices
+          schema: public
+  - name: sessions
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: sessions
+          schema: public
+  - name: subscriptions
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: subscriptions
+          schema: public

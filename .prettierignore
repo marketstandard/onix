@@ -1,0 +1,5 @@
+*.mdx
+*.ejs
+.next/**/*
+node_modules/**/*
+types/generated/**/*

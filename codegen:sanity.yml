@@ -1,0 +1,11 @@
+overwrite: true
+schema:
+  - '':
+      headers:
+        Content-Type: application/json
+documents: 'src/services/server/sanity/**/*.ts'
+generates:
+  src/types/generated/sanity.ts:
+    plugins:
+      - 'typescript'
+      - 'typescript-operations'

@@ -1,0 +1,39 @@
+{
+  "name": "hasura",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "hasura:local": "yarn hasura --project migrations --envfile .env.local",
+    "hasura:staging": "yarn hasura --project migrations --envfile .env.staging",
+    "hasura:production": "yarn hasura --project migrations --envfile .env.production",
+    "hasura:console:local": "yarn hasura:local console",
+    "hasura:console:staging": "yarn hasura:staging console",
+    "hasura:console:production": "yarn hasura:production console",
+    "hasura:status:staging": "yarn hasura:staging migrate status",
+    "hasura:status:production": "yarn hasura:production migrate status",
+    "hasura:metastatus:staging": "yarn hasura:staging metadata inconsistency status",
+    "hasura:metastatus:production": "yarn hasura:production metadata inconsistency status",
+    "hasura:metamigrate:local": "yarn hasura:local metadata apply",
+    "hasura:metamigrate:staging": "yarn hasura:staging metadata apply",
+    "hasura:metamigrate:production": "yarn hasura:production metadata apply",
+    "hasura:migrate:local": "yarn hasura:local migrate apply",
+    "hasura:migrate:staging": "yarn hasura:staging migrate apply",
+    "hasura:migrate:production": "yarn hasura:production migrate apply",
+    "hasura:metareload:local": "yarn hasura:local metadata reload",
+    "hasura:metareload:staging": "yarn hasura:staging metadata reload",
+    "hasura:metareload:production": "yarn hasura:production metadata reload",
+    "hasura:down:staging": "yarn hasura:staging migrate apply --down 1",
+    "hasura:up:staging": "yarn hasura:staging migrate apply --up 1",
+    "hasura:down:production": "yarn hasura:production migrate apply --down 1",
+    "hasura:up:production": "yarn hasura:production migrate apply --up 1",
+    "hasura:seed:staging": "NODE_ENV=development node --loader ts-node/esm ./apply-seeds.ts",
+    "hasura:seed:production": "NODE_ENV=production node --loader ts-node/esm ./apply-seeds.ts"
+  },
+  "dependencies": {
+    "hasura-cli": "^2.41.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

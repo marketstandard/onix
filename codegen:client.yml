@@ -1,0 +1,19 @@
+overwrite: true
+schema:
+  - 'http://localhost:8080/v1/graphql':
+      headers:
+        X-Hasura-Admin-Secret: 'localsecret1'
+        Content-Type: application/json
+documents: 'src/{components,gql,screens,pages,layouts,hooks,context}/**/*.{ts,tsx}'
+generates:
+  src/types/generated/client.tsx:
+    plugins:
+      - 'typescript'
+      - 'typescript-operations'
+      - 'typescript-react-apollo'
+    config:
+      withHooks: true
+      withComponent: false
+      withHOC: false
+      noNamespaces: true # Use these next 2 or not?
+      strict: true

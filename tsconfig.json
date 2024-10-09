@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "typeRoots": ["node_modules/@types", "./src/types/root"],
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "baseUrl": "./src",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "strictNullChecks": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "next-sitemap.config.js",
+    "scripts/cloudflare/getBlogPost.js",
+    "scripts/cloudflare/listBlogPosts.js",
+    "scripts/cloudflare/s3Instance.js",
+    "scripts/sanity/graphql/getAllCategories.js",
+    "src/services/server/sanity/graphql/getAllPosts.js",
+    "src/pages/404.tsx",
+    "sentry.client.config.js"
+  ],
+  "exclude": ["node_modules", "src/**/*.spec.ts", "src/**/*.test.ts", "functions"]
+}
