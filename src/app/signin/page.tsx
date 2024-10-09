@@ -20,7 +20,7 @@ export default async function SignInPage() {
       <Head>
         <title>Sign In</title>
       </Head>
-      <div className="w-full px-2">
+      <div className="flex w-full justify-center px-2">
         <Card className="w-full max-w-lg p-8">
           <CardBody>
             <div className="mb-6 space-y-3 text-center">
