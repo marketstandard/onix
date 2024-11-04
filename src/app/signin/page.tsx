@@ -4,7 +4,7 @@ import { AuthError } from 'next-auth';
 import Head from 'next/head';
 import { redirect } from 'next/navigation';
 
-const SIGNIN_ERROR_URL = '/login-test';
+const SIGNIN_ERROR_URL = '/login-error';
 
 export default async function SignInPage() {
   const session = await auth();

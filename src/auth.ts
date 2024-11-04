@@ -6,7 +6,7 @@ import { HasuraAdapter } from 'services/server/graphql/auth';
 const providers: Provider[] = [
   Resend({
     apiKey: process.env.RESEND_API_KEY,
-    from: 'eng@marketstandard.app',
+    from: 'Onix <no-reply@onix.chat>',
   }),
 ];
 
