@@ -55,7 +55,19 @@ export default async function SignInPage() {
                   }
                 }}
               >
-                <Input name="email" id="email" placeholder="Your email" />
+                <div className="relative inline-flex h-10 min-h-10 w-full flex-row items-center gap-3 rounded-medium bg-default-100 px-3 shadow-sm outline-none !duration-150 tap-highlight-transparent transition-background data-[hover=true]:bg-default-200 group-data-[focus-visible=true]:z-10 group-data-[focus=true]:bg-default-100 group-data-[focus-visible=true]:ring-2 group-data-[focus-visible=true]:ring-focus group-data-[focus-visible=true]:ring-offset-2 group-data-[focus-visible=true]:ring-offset-background motion-reduce:transition-none">
+                  <div className="box-border inline-flex h-full w-full items-center">
+                    <input
+                      className="w-full rounded-md bg-transparent bg-clip-text text-small font-normal !outline-none file:cursor-pointer file:border-0 file:bg-transparent placeholder:text-foreground-500 autofill:bg-transparent focus-visible:outline-none data-[has-end-content=true]:pe-1.5 data-[has-start-content=true]:ps-1.5 group-data-[has-value=true]:text-default-foreground"
+                      name="email"
+                      id="email"
+                      placeholder="Your email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
                 <div className="mt-2">
                   <Button
                     type="submit"
