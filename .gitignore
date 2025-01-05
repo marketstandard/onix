@@ -46,3 +46,7 @@ next-env.d.ts
 
 # sitemap
 public/sitemap*
+
+# anchor
+.anchor
+target
