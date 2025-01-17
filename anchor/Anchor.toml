@@ -4,8 +4,14 @@
 resolution = true
 skip-lint = false
 
+[programs.devnet]
+escrow_sol = "9d65gQAER8QiMKkzRaag3fcX81rNotqfi1TwYDEb7gsP"
+
 [programs.localnet]
-purchase_tokens = "8WTBR9PBTWcrWV6zntn5Rt5RYFcwMfNnMQsi3XgiGhZr"
+escrow_sol = "9d65gQAER8QiMKkzRaag3fcX81rNotqfi1TwYDEb7gsP"
+
+[programs.mainnet]
+escrow_sol = "9d65gQAER8QiMKkzRaag3fcX81rNotqfi1TwYDEb7gsP"
 
 [registry]
 url = "https://api.apr.dev"
@@ -16,6 +22,3 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-
-[test]
-startup_wait = 10000

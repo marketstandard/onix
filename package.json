@@ -23,7 +23,11 @@
     "codegen:client": "graphql-codegen --config codegen:client.yml",
     "codegen:server": "graphql-codegen --config codegen:server.yml",
     "codegen:auth": "graphql-codegen --config codegen:auth.ts",
-    "codegen:sanity": "graphql-codegen --config codegen:sanity.yml"
+    "codegen:sanity": "graphql-codegen --config codegen:sanity.yml",
+    "solana:airdrop:dev": "solana airdrop 2 -k ./secrets/wallet-dev.json --url https://api.devnet.solana.com",
+    "solana:deploy:escrowSol:dev": "cd anchor && anchor deploy --provider.cluster devnet --provider.wallet ../secrets/wallet-dev.json",
+    "solana:deploy:escrowSol:prod": "cd anchor && anchor deploy --provider.cluster mainnet --provider.wallet ../secrets/wallet-prod.json",
+    "solana:copyIdl:escrowSol": "cp ./anchor/target/idl/escrow_sol.json ./src/types/generated/solana/escrowSol.json && anchor idl type ./src/types/generated/solana/escrowSol.json -o ./src/types/generated/solana/escrowSol.ts"
   },
   "resolutions": {
     "string-width": "4.2.3",
@@ -72,6 +76,11 @@
     "@sanity/vision": "3",
     "@sentry/nextjs": "^7.54.0",
     "@solana/spl-token": "^0.4.9",
+    "@solana/wallet-adapter-phantom": "^0.9.24",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@solana/web3.js": "^1.98.0",
     "@stripe/react-stripe-js": "^2.6.2",
     "@stripe/stripe-js": "^1.54.0",
     "@testing-library/jest-dom": "^6.4.2",

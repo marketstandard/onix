@@ -1,0 +1,404 @@
+{
+  "address": "9d65gQAER8QiMKkzRaag3fcX81rNotqfi1TwYDEb7gsP",
+  "metadata": {
+    "name": "escrow_sol",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "adjust_rate",
+      "discriminator": [
+        143,
+        27,
+        123,
+        27,
+        109,
+        218,
+        64,
+        219
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_rate_lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "debit",
+      "discriminator": [
+        144,
+        252,
+        105,
+        115,
+        174,
+        111,
+        100,
+        65
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "hold",
+          "writable": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_llm_tokens",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit",
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "hold",
+      "discriminator": [
+        83,
+        159,
+        208,
+        118,
+        203,
+        182,
+        239,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "escrow",
+          "writable": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "hold",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "escrow"
+              },
+              {
+                "kind": "account",
+                "path": "escrow.hold_counter",
+                "account": "EscrowAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_llm_tokens",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "rate_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "hold_timeout_seconds",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "release_hold",
+      "discriminator": [
+        106,
+        109,
+        70,
+        162,
+        197,
+        158,
+        92,
+        243
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "hold",
+          "writable": true
+        },
+        {
+          "name": "escrow",
+          "writable": true
+        },
+        {
+          "name": "config"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ConfigAccount",
+      "discriminator": [
+        189,
+        255,
+        97,
+        70,
+        186,
+        189,
+        24,
+        102
+      ]
+    },
+    {
+      "name": "EscrowAccount",
+      "discriminator": [
+        36,
+        69,
+        48,
+        18,
+        128,
+        225,
+        125,
+        135
+      ]
+    },
+    {
+      "name": "HoldAccount",
+      "discriminator": [
+        235,
+        211,
+        184,
+        241,
+        228,
+        100,
+        127,
+        40
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidAuthority",
+      "msg": "Invalid authority"
+    },
+    {
+      "code": 6001,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient funds"
+    },
+    {
+      "code": 6002,
+      "name": "NotEnoughLamportsOnHold",
+      "msg": "Not enough lamports on hold"
+    },
+    {
+      "code": 6003,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "ConfigAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "rate_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "hold_timeout_seconds",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "EscrowAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "amount_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "hold_counter",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HoldAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "escrow_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

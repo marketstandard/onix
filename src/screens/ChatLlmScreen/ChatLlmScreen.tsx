@@ -56,6 +56,7 @@ import { Product } from 'types/generated/sanity';
 import { KeyCodes } from 'utils/client/dom';
 import { useBrowserStorage } from 'context/storage/BrowserStorageContext';
 import Github from 'svg/Github';
+import ConnectWallet from 'components/ConnectWallet/ConnectWallet';
 import Head from 'components/Head';
 import Link from 'components/Link';
 import PricingCards from 'components/pricing/PricingCards';
@@ -693,7 +694,8 @@ export default function ChatLlmScreen({ product }: Props) {
             ) : null}
           </div>
         </nav>
-        <div className="py-4">
+        <div className="space-y-4 py-4">
+          <ConnectWallet />
           {session.status === 'loading' ? null : session.status === 'unauthenticated' ? (
             <div className="px-4">
               <Button

@@ -5,6 +5,7 @@ import { HOME_PAGE } from 'constants/pages';
 import { Product } from 'types/generated/sanity';
 import { useModal } from 'hooks/useModal';
 import Button from 'components/Button';
+import ConnectWallet from 'components/ConnectWallet/ConnectWallet';
 import Link from 'components/Link';
 import classNames from 'styles/utils/classNames';
 
@@ -97,7 +98,9 @@ export default function SidebarNav({ isTopNavActive, product }: Props) {
                 </>
               ) : null}
             </div>
-            <div className="border-primary-lightmode w-full items-center pb-4 dark:border-border-primary-darkmode">
+            <div className="border-primary-lightmode w-full items-center space-y-4 pb-4 dark:border-border-primary-darkmode">
+              <ConnectWallet />
+
               {false ? (
                 <div className="flex flex-col px-4 pb-4">
                   {/* <div className="grid grid-cols-12">
