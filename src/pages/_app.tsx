@@ -32,7 +32,7 @@ export default function App({ Component, pageProps, err }: AppProps & { err: any
   const viewport = getIsNativePlatform() ? APP_VIEWPORT : WEB_VIEWPORT;
 
   const network =
-    APP_STAGE === 'development' ? WalletAdapterNetwork.Devnet : WalletAdapterNetwork.Mainnet;
+    APP_STAGE !== 'production' ? WalletAdapterNetwork.Devnet : WalletAdapterNetwork.Mainnet;
   const endpoint = `https://api.${network}.solana.com`;
   const wallets = React.useMemo(() => [new PhantomWalletAdapter()], [network]);
 

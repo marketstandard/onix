@@ -1,4 +1,5 @@
 import * as anchor from '@coral-xyz/anchor';
+import { BN } from '@coral-xyz/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { CONFIG_PDA_SEED, ESCROW_SOL_PROGRAM_ID } from 'constants/solana';
 import { EscrowSol } from 'types/generated/solana/escrowSol';
@@ -51,34 +52,47 @@ export const getEscrowAccount = async ({
   const program = initEscrowSolProgram(provider);
   const { escrowPda } = getEscrowPda(signer?.publicKey || provider.publicKey);
 
-  const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+  try {
+    const escrowAccount = await program?.account?.escrowAccount?.fetch(escrowPda);
 
-  return { escrowAccount };
+    return { escrowAccount };
+  } catch (e) {
+    return { escrowAccount: null };
+  }
 };
 
 export const getHoldPda = (escrow: PublicKey, holdCounter: number) => {
+  const holdCounterBuffer = new anchor.BN(holdCounter).toArrayLike(Buffer, 'le', 8);
+
   const [holdPda, holdPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
-    [escrow.toBuffer(), new anchor.BN(holdCounter).toBuffer('le', 8)],
+    [escrow.toBuffer(), holdCounterBuffer],
     ESCROW_SOL_PROGRAM_ID,
   );
   return { holdPda, holdPdaBump };
 };
 
-export const getHoldAccount = async ({
-  provider,
-  signer,
-  holdCounter,
-}: {
-  provider: anchor.Provider;
-  signer?: Keypair;
-  holdCounter: number;
-}) => {
-  const program = initEscrowSolProgram(provider);
-  const { holdPda } = getHoldPda(signer?.publicKey || provider.publicKey, holdCounter);
+export const getHoldAccount = async (
+  params:
+    | {
+        provider: anchor.Provider;
+        owner: PublicKey;
+        holdCounter: number;
+      }
+    | {
+        provider: anchor.Provider;
+        holdPda: PublicKey;
+      },
+) => {
+  const program = initEscrowSolProgram(params.provider);
+  const holdPda =
+    'holdPda' in params ? params.holdPda : getHoldPda(params.owner, params.holdCounter).holdPda;
 
-  const holdAccount = await program.account.holdAccount.fetch(holdPda);
-
-  return { holdAccount };
+  try {
+    const holdAccount = await program.account.holdAccount.fetch(holdPda);
+    return { holdAccount };
+  } catch (e) {
+    return { holdAccount: null };
+  }
 };
 
 export { deposit } from './deposit';

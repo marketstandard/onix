@@ -1,5 +1,4 @@
 import * as anchor from '@coral-xyz/anchor';
-import { Keypair } from '@solana/web3.js';
 import { BaseParams, getConfigPda, initEscrowSolProgram } from '.';
 
 interface Params extends BaseParams {

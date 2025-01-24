@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Message, useChat } from '@ai-sdk/react';
 import { ChatRequestOptions } from '@ai-sdk/ui-utils';
+import * as anchor from '@coral-xyz/anchor';
 import {
   AdjustmentsVerticalIcon,
   InformationCircleIcon,
@@ -49,12 +50,25 @@ import {
   Tooltip,
   useDisclosure,
 } from '@nextui-org/react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { MAX_RESPONSE_TOKENS } from 'constants/app';
 import { HistoryMode, historySelectionLabels } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
+import {
+  deposit,
+  getConfigAccount,
+  getEscrowAccount,
+  getEscrowPda,
+  getHoldPda,
+  hold,
+} from 'services/shared/solana/escrowSol';
+import { countLlmTokens } from 'utils/ai/countLlmTokens';
 import { KeyCodes } from 'utils/client/dom';
 import { useBrowserStorage } from 'context/storage/BrowserStorageContext';
+import { useAnchorProvider } from 'hooks/useAnchorProvider';
 import Github from 'svg/Github';
 import ConnectWallet from 'components/ConnectWallet/ConnectWallet';
 import Head from 'components/Head';
@@ -296,6 +310,7 @@ export default function ChatLlmScreen({ product }: Props) {
   const newChatTextAreaRef = React.useRef<HTMLTextAreaElement>(null);
   const session = useSession();
   const router = useRouter();
+  const { connected, disconnect, signMessage, publicKey } = useWallet();
   const [isNewChat, setIsNewChat] = useState<boolean>(true);
   const [selectedHistoryTab, setSelectedHistoryTab] = React.useState(HistoryTabs.All);
   const [tagSearch, setTagSearch] = React.useState('');
@@ -462,6 +477,117 @@ export default function ChatLlmScreen({ product }: Props) {
 
     if (newModel) {
       setSelectedModel(newModel);
+    }
+  };
+
+  const { provider, isConnected } = useAnchorProvider();
+
+  const [balance, setBalance] = useState<number>(0);
+  const [depositAmount, setDepositAmount] = React.useState<number>(0);
+  const [withdrawAmount, setWithdrawAmount] = React.useState<number>(0);
+
+  const fetchBalance = async () => {
+    if (!isConnected) {
+      setBalance(0);
+      return;
+    }
+
+    const { escrowAccount } = await getEscrowAccount({ provider });
+    setBalance(escrowAccount?.amountLamports?.toNumber() ?? 0);
+  };
+
+  useEffect(() => {
+    fetchBalance();
+  }, [isConnected, provider]);
+
+  const handleDeposit = async () => {
+    if (!isConnected || !depositAmount) return;
+
+    const amountLamports = depositAmount * LAMPORTS_PER_SOL;
+    await deposit({ provider, amountLamports });
+
+    await fetchBalance();
+  };
+
+  const handleEscrowSol = async () => {
+    if (!isConnected) throw new Error('Wallet not connected');
+
+    const { escrowAccount } = await getEscrowAccount({ provider });
+    const { amountLamports } = escrowAccount;
+
+    const { configAccount } = await getConfigAccount({ provider });
+    const { rateLamports } = configAccount;
+
+    const prevMessagesTokens = messages.reduce((total, msg) => {
+      const roleOverhead = 4;
+      return total + roleOverhead + countLlmTokens(msg.content);
+    }, 0);
+    const currMessageTokens = countLlmTokens(input);
+    // 10% buffer - don't worry, it will be refunded at close
+    const totalTokens = (prevMessagesTokens + currMessageTokens + MAX_RESPONSE_TOKENS) * 1.1;
+
+    if (amountLamports.lt(new anchor.BN(totalTokens * rateLamports.toNumber()))) {
+      throw new Error(
+        `Missing required lamports to conduct transaction. Required: ${
+          totalTokens * rateLamports.toNumber()
+        }, Available: ${amountLamports.toString()}`,
+      );
+    }
+
+    const holdRes = await hold({ provider, amountLlmTokens: totalTokens });
+
+    const { holdAccount, holdCounter } = holdRes;
+
+    const { escrowPda } = getEscrowPda(provider.publicKey);
+    const holdAccountPda = getHoldPda(escrowPda, holdCounter.toNumber());
+
+    return { holdPda: holdAccountPda.holdPda };
+  };
+
+  const handleAuthenticatedSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+    chatRequestOptions?: ChatRequestOptions,
+  ) => {
+    e.preventDefault();
+
+    console.log('isConnected:', isConnected);
+    console.log('session status:', session.status);
+
+    if (session.status === 'loading') {
+      return;
+    }
+
+    if (isConnected) {
+      try {
+        const { holdPda } = await handleEscrowSol();
+
+        const body = {
+          holdAccountPda: holdPda.toBase58(),
+          publicKey: publicKey.toBase58(),
+        };
+
+        console.log('Solana body:', body);
+
+        const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
+
+        const bodyWithSignature = {
+          ...body,
+          signature: Buffer.from(signature).toString('base64'),
+        };
+
+        console.log('Final request body:', bodyWithSignature);
+
+        handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
+        setIsNewChat(false);
+      } catch (error) {
+        console.error('Error escrowing sol:', error);
+      }
+    } else if (session.status !== 'authenticated') {
+      router.push('/signin');
+      return;
+    } else {
+      handleSubmit(e, { ...chatRequestOptions });
+      setIsNewChat(false);
     }
   };
 
@@ -696,7 +822,8 @@ export default function ChatLlmScreen({ product }: Props) {
         </nav>
         <div className="space-y-4 py-4">
           <ConnectWallet />
-          {session.status === 'loading' ? null : session.status === 'unauthenticated' ? (
+          {session.status === 'loading' ? null : session.status === 'unauthenticated' &&
+            !connected ? (
             <div className="px-4">
               <Button
                 as={Link}
@@ -789,19 +916,7 @@ export default function ChatLlmScreen({ product }: Props) {
                   </h2>
                 </div>
                 <form
-                  onSubmit={(e) => {
-                    if (session.status === 'loading') {
-                      return;
-                    }
-
-                    if (session.status !== 'authenticated') {
-                      router.push('/signin');
-                      return;
-                    }
-
-                    handleSubmit(e);
-                    setIsNewChat(false);
-                  }}
+                  onSubmit={handleAuthenticatedSubmit}
                   className="mx-auto flex w-full max-w-2xl"
                 >
                   <Textarea
@@ -815,12 +930,12 @@ export default function ChatLlmScreen({ product }: Props) {
                           return;
                         }
 
-                        if (session.status !== 'authenticated') {
+                        if (session.status !== 'authenticated' && !isConnected) {
                           router.push('/signin');
                           return;
                         }
 
-                        handleSubmit();
+                        handleAuthenticatedSubmit(event);
                         setIsNewChat(false);
                       }
                     }}
@@ -841,6 +956,7 @@ export default function ChatLlmScreen({ product }: Props) {
                           isDisabled={!input}
                           radius="lg"
                           variant={!input ? 'flat' : 'solid'}
+                          type="submit"
                         >
                           <Icon
                             className={classNames('text-black [&>path]:stroke-[2px]')}
@@ -1118,7 +1234,7 @@ export default function ChatLlmScreen({ product }: Props) {
                 Building the Future of Private AI
               </SectionTitle>
               <p className="mx-auto mt-6 max-w-xl text-center text-text-secondary-darkmode">
-                Explore what’s coming next as we continue to build features and tools that put you
+                Explore what's coming next as we continue to build features and tools that put you
                 in charge of your data, with no compromises.
               </p>
               <div className="mx-auto mt-10 flex max-w-5xl flex-wrap justify-between gap-y-8">
@@ -1373,12 +1489,7 @@ export default function ChatLlmScreen({ product }: Props) {
               messageText={input}
               setMessageText={handleInputChange}
               displayInfo={displayInfo}
-              submitChat={(
-                e: React.FormEvent<HTMLFormElement>,
-                chatRequestOptions?: ChatRequestOptions,
-              ) => {
-                handleSubmit(e, chatRequestOptions);
-              }}
+              submitChat={handleAuthenticatedSubmit}
             />
 
             {/* Controls */}
@@ -1774,9 +1885,83 @@ export default function ChatLlmScreen({ product }: Props) {
             <>
               <ModalHeader className="flex flex-col gap-1">Settings</ModalHeader>
               <ModalBody>
-                <div className="mt-8 text-sm font-medium text-red-500">
-                  <button onClick={() => signOut()}>Log Out</button>
-                </div>
+                {connected ? (
+                  <div className="space-y-6">
+                    <div className="rounded-lg border border-border-primary-darkmode p-4">
+                      <h3 className="mb-2 text-sm font-medium">Credit Balance</h3>
+                      <div className="flex items-center justify-between">
+                        <div className="text-2xl font-semibold">
+                          {balance ? `${balance / LAMPORTS_PER_SOL} SOL` : '0.00 SOL'}
+                        </div>
+                      </div>
+                      <Accordion>
+                        <AccordionItem
+                          key="1"
+                          aria-label="Manage SOL"
+                          title="Manage SOL"
+                          className="px-0 text-sm"
+                        >
+                          <Tabs aria-label="SOL management options" fullWidth>
+                            <Tab key="deposit" title="Deposit">
+                              <div className="space-y-4 py-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm">Amount to deposit</span>
+                                  <span className="text-sm font-medium">{`${depositAmount} SOL`}</span>
+                                </div>
+                                <Slider
+                                  aria-label="Deposit amount"
+                                  maxValue={10}
+                                  minValue={0}
+                                  step={0.1}
+                                  value={depositAmount}
+                                  onChange={(value) => setDepositAmount(value as number)}
+                                  className="w-full"
+                                />
+                                <Button
+                                  color="primary"
+                                  className="w-full font-semibold text-black"
+                                  isDisabled={depositAmount <= 0}
+                                  onClick={handleDeposit}
+                                >
+                                  Deposit {depositAmount} SOL
+                                </Button>
+                              </div>
+                            </Tab>
+                            <Tab key="withdraw" title="Withdraw">
+                              <div className="space-y-4 py-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm">Amount to withdraw</span>
+                                  <span className="text-sm font-medium">{`${withdrawAmount} SOL`}</span>
+                                </div>
+                                <Slider
+                                  aria-label="Withdraw amount"
+                                  maxValue={balance ? balance / LAMPORTS_PER_SOL : 0}
+                                  minValue={0}
+                                  step={0.1}
+                                  value={withdrawAmount}
+                                  onChange={(value) => setWithdrawAmount(value as number)}
+                                  className="w-full"
+                                />
+                                <Button
+                                  color="primary"
+                                  variant="bordered"
+                                  className="w-full"
+                                  isDisabled={withdrawAmount <= 0}
+                                >
+                                  Withdraw {withdrawAmount} SOL
+                                </Button>
+                              </div>
+                            </Tab>
+                          </Tabs>
+                        </AccordionItem>
+                      </Accordion>
+                    </div>
+                  </div>
+                ) : session.status === 'authenticated' ? (
+                  <div className="mt-8 text-sm font-medium text-red-500">
+                    <button onClick={() => signOut()}>Log Out</button>
+                  </div>
+                ) : null}
               </ModalBody>
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>

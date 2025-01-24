@@ -1,3 +1,4 @@
+import * as anchor from '@coral-xyz/anchor';
 import { BaseParams, getConfigAccount, getConfigPda, initEscrowSolProgram } from '.';
 
 interface Params extends BaseParams {

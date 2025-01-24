@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{clock::Clock, program::invoke, system_instruction};
 
-declare_id!("9d65gQAER8QiMKkzRaag3fcX81rNotqfi1TwYDEb7gsP");
+declare_id!("7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5");
 
 const CONFIG_PDA_SEED: &[u8] = b"config";
 
@@ -54,7 +54,7 @@ pub mod escrow_sol {
 
     pub fn hold(ctx: Context<Hold>, amount_llm_tokens: u64) -> Result<()> {
         require!(
-            ctx.accounts.signer.key() == ctx.accounts.config.authority,
+            ctx.accounts.signer.key() == ctx.accounts.escrow.authority,
             ErrorCode::InvalidAuthority
         );
 

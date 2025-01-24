@@ -1,3 +1,4 @@
+import * as anchor from '@coral-xyz/anchor';
 import { BaseParams, getEscrowAccount, getEscrowPda, initEscrowSolProgram } from '.';
 
 interface Deposit extends Omit<BaseParams, 'signer'> {
@@ -6,6 +7,7 @@ interface Deposit extends Omit<BaseParams, 'signer'> {
 
 export const deposit = async ({ provider, amountLamports }: Deposit) => {
   const program = initEscrowSolProgram(provider);
+
   const { escrowPda } = getEscrowPda(provider.publicKey);
   await program.methods
     .deposit(new anchor.BN(amountLamports))

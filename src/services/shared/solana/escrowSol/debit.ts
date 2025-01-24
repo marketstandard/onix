@@ -1,21 +1,14 @@
-import {
-  BaseParams,
-  getConfigPda,
-  getEscrowPda,
-  getHoldAccount,
-  getHoldPda,
-  initEscrowSolProgram,
-} from '.';
+import * as anchor from '@coral-xyz/anchor';
+import { PublicKey } from '@solana/web3.js';
+import { BaseParams, getConfigPda, getHoldAccount, initEscrowSolProgram } from '.';
 
 interface Params extends BaseParams {
   amountLlmTokens: number;
-  holdCounter: number;
+  holdPda: PublicKey;
 }
 
-export const debit = async ({ provider, amountLlmTokens, signer, holdCounter }: Params) => {
+export const debit = async ({ provider, amountLlmTokens, signer, holdPda }: Params) => {
   const program = initEscrowSolProgram(provider);
-  const { escrowPda } = getEscrowPda(signer.publicKey);
-  const { holdPda } = getHoldPda(escrowPda, holdCounter);
   const { configPda } = getConfigPda();
 
   if (signer) {
@@ -41,7 +34,7 @@ export const debit = async ({ provider, amountLlmTokens, signer, holdCounter }: 
       .rpc({ commitment: 'confirmed' });
   }
 
-  const holdAccount = await getHoldAccount({ provider, signer, holdCounter });
+  const holdAccount = await getHoldAccount({ provider, holdPda });
 
   return { holdAccount };
 };
