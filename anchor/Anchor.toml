@@ -1,0 +1,24 @@
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
+
+[programs.devnet]
+escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
+
+[programs.mainnet]
+escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "../secrets/wallet-dev.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

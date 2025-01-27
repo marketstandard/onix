@@ -134,3 +134,5 @@ const NERDY_PHRASES = [
   'Contacting Stargate command...',
   'Chevron 5 encoded...',
 ];
+
+export const MAX_RESPONSE_TOKENS = 5000;

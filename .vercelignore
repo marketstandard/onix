@@ -8,3 +8,4 @@
 ./hasura/seeds
 ./hasura/node_modules
 ./secrets
+./anchor
