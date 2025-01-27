@@ -127,6 +127,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
 
     billSolana = true;
 
+    console.log('bill solana auth step', billSolana);
     try {
       const messageBody = {
         holdAccountPda,
@@ -269,6 +270,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
       if (billSolana) {
         const finalTokenCount = countLlmTokens(completion.text);
         const totalTokens = messageTokens + finalTokenCount;
+
         const { holdAccount } = await debit({
           provider,
           signer: keypair,

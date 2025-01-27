@@ -34,7 +34,7 @@ export const debit = async ({ provider, amountLlmTokens, signer, holdPda }: Para
       .rpc({ commitment: 'confirmed' });
   }
 
-  const holdAccount = await getHoldAccount({ provider, holdPda });
+  const { holdAccount } = await getHoldAccount({ provider, holdPda });
 
   return { holdAccount };
 };

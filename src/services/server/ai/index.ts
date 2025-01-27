@@ -26,7 +26,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 // export const langchainModel = ollama('langchain');
 
 const LLAMA_SMART = 'llama-3.1-405b-reasoning';
-const LLAMA_VERSATILE = 'llama-3.1-70b-versatile';
+const LLAMA_VERSATILE = 'llama-3.3-70b-versatile';
 const LLAMA_INSTANT = 'llama-3.1-8b-instant';
 
 // export const getLocalModel = (model?: string) => {

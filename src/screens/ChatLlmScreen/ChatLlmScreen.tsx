@@ -427,16 +427,18 @@ export default function ChatLlmScreen({ product }: Props) {
     initialMessages: activeChat?.messages || undefined,
     onResponse: (response) => {
       console.log('onResponse', response);
+      if (response) {
+        updateMessages(messages);
+      }
     },
     onFinish: (response) => {
-      // console.log('onFinish', response);
-      // generateTitle();
+      if (response) {
+        updateMessages(messages);
+        generateTitle();
+      }
     },
     onToolCall: (tool) => {
       // console.log('onToolCall', tool);
-      /**
-       * @todo handle genui and clientside actions
-       */
     },
     sendExtraMessageFields: true,
   });
@@ -550,9 +552,6 @@ export default function ChatLlmScreen({ product }: Props) {
   ) => {
     e.preventDefault();
 
-    console.log('isConnected:', isConnected);
-    console.log('session status:', session.status);
-
     if (session.status === 'loading') {
       return;
     }
@@ -566,16 +565,12 @@ export default function ChatLlmScreen({ product }: Props) {
           publicKey: publicKey.toBase58(),
         };
 
-        console.log('Solana body:', body);
-
         const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
 
         const bodyWithSignature = {
           ...body,
           signature: Buffer.from(signature).toString('base64'),
         };
-
-        console.log('Final request body:', bodyWithSignature);
 
         handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
         setIsNewChat(false);
@@ -781,34 +776,36 @@ export default function ChatLlmScreen({ product }: Props) {
         <nav className={classNames('flex flex-auto grow flex-col overflow-y-auto py-2')}>
           <div className="flex flex-col px-2">
             {chatsForNav && chatsForNav.length > 0 ? (
-              (session.status === 'authenticated' ? chatsForNav : []).map((chat, i) => {
-                return (
-                  <div key={chat.id} className="flex w-full">
-                    <div
-                      className={classNames(
-                        'w-0.5 shrink-0',
-                        chat.id === activeChatId ? 'bg-brand-primary' : 'bg-transparent',
-                      )}
-                    >
-                      &nbsp;
+              (connected || session.status === 'authenticated' ? chatsForNav : []).map(
+                (chat, i) => {
+                  return (
+                    <div key={chat.id} className="flex w-full">
+                      <div
+                        className={classNames(
+                          'w-0.5 shrink-0',
+                          chat.id === activeChatId ? 'bg-brand-primary' : 'bg-transparent',
+                        )}
+                      >
+                        &nbsp;
+                      </div>
+                      <button
+                        className={classNames(
+                          'w-full rounded-lg p-2.5 text-left text-sm hover:bg-brand-gray-900',
+                        )}
+                        onClick={() => {
+                          setActiveChatId(chat.id);
+                          setMessages(undefined);
+                          setIsNewChat(false);
+                          setInput('');
+                          onCloseMobileSidebar();
+                        }}
+                      >
+                        <div className="truncate">{chat?.title || NEW_CHAT_NAME}</div>
+                      </button>
                     </div>
-                    <button
-                      className={classNames(
-                        'w-full rounded-lg p-2.5 text-left text-sm hover:bg-brand-gray-900',
-                      )}
-                      onClick={() => {
-                        setActiveChatId(chat.id);
-                        setMessages(undefined);
-                        setIsNewChat(false);
-                        setInput('');
-                        onCloseMobileSidebar();
-                      }}
-                    >
-                      <div className="truncate">{chat?.title || NEW_CHAT_NAME}</div>
-                    </button>
-                  </div>
-                );
-              })
+                  );
+                },
+              )
             ) : selectedHistoryTab === HistoryTabs.Pinned || filterCount ? (
               <Card>
                 <CardBody>
@@ -889,7 +886,7 @@ export default function ChatLlmScreen({ product }: Props) {
   return (
     <>
       <Meta />
-      {isNewChat || session.status !== 'authenticated' ? (
+      {isNewChat || (session.status !== 'authenticated' && !isConnected) ? (
         <div className="safearea-pad-y flex min-h-screen flex-col bg-[rgba(0,253,200,0.05)]">
           {leftnav}
           <main className="relative mx-auto flex w-full grow flex-col px-2 pl-2 lg:pl-side-nav">
@@ -1946,7 +1943,7 @@ export default function ChatLlmScreen({ product }: Props) {
                                   color="primary"
                                   variant="bordered"
                                   className="w-full"
-                                  isDisabled={withdrawAmount <= 0}
+                                  isDisabled={true} //withdrawAmount <= 0}
                                 >
                                   Withdraw {withdrawAmount} SOL
                                 </Button>
