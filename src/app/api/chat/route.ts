@@ -109,6 +109,9 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
   const session: Session = req?.auth;
   const payload = await req?.json();
 
+  console.log('session', session);
+  console.log('payload', payload);
+
   const { messages, holdAccountPda, publicKey, signature } = payload;
 
   const keypair = Keypair.fromSecretKey(
