@@ -54,6 +54,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { SiSolana } from 'react-icons/si';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
 import { HistoryMode, historySelectionLabels } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
@@ -502,10 +503,10 @@ export default function ChatLlmScreen({ product }: Props) {
     fetchBalance();
   }, [isConnected, provider]);
 
-  const handleDeposit = async () => {
-    if (!isConnected || !depositAmount) return;
+  const handleDeposit = async (amount: number) => {
+    if (!isConnected || !amount) return;
 
-    const amountLamports = depositAmount * LAMPORTS_PER_SOL;
+    const amountLamports = amount * LAMPORTS_PER_SOL;
     await deposit({ provider, amountLamports });
 
     await fetchBalance();
@@ -1890,68 +1891,72 @@ export default function ChatLlmScreen({ product }: Props) {
                         <div className="text-2xl font-semibold">
                           {balance ? `${balance / LAMPORTS_PER_SOL} SOL` : '0.00 SOL'}
                         </div>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(0.1)}
+                            >
+                              +0.1 <SiSolana />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(0.25)}
+                            >
+                              +0.25 <SiSolana />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(0.5)}
+                            >
+                              +0.5 <SiSolana />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(1)}
+                            >
+                              +1.0 <SiSolana />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              classNames={{
+                                input: 'text-xs',
+                                base: 'min-h-unit-8',
+                              }}
+                              type="number"
+                              size="sm"
+                              placeholder="Custom amount"
+                              value={depositAmount?.toString() || ''}
+                              onChange={(e) => setDepositAmount(Number(e.target.value))}
+                              startContent={
+                                <div className="pointer-events-none flex items-center">
+                                  <span className="text-xs text-default-400">
+                                    <SiSolana />
+                                  </span>
+                                </div>
+                              }
+                            />
+                            <Button
+                              size="sm"
+                              className="text-xs text-black"
+                              color="primary"
+                              isDisabled={!depositAmount || depositAmount <= 0}
+                              onClick={() => handleDeposit(depositAmount)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <Accordion>
-                        <AccordionItem
-                          key="1"
-                          aria-label="Manage SOL"
-                          title="Manage SOL"
-                          className="px-0 text-sm"
-                        >
-                          <Tabs aria-label="SOL management options" fullWidth>
-                            <Tab key="deposit" title="Deposit">
-                              <div className="space-y-4 py-4">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Amount to deposit</span>
-                                  <span className="text-sm font-medium">{`${depositAmount} SOL`}</span>
-                                </div>
-                                <Slider
-                                  aria-label="Deposit amount"
-                                  maxValue={10}
-                                  minValue={0}
-                                  step={0.1}
-                                  value={depositAmount}
-                                  onChange={(value) => setDepositAmount(value as number)}
-                                  className="w-full"
-                                />
-                                <Button
-                                  color="primary"
-                                  className="w-full font-semibold text-black"
-                                  isDisabled={depositAmount <= 0}
-                                  onClick={handleDeposit}
-                                >
-                                  Deposit {depositAmount} SOL
-                                </Button>
-                              </div>
-                            </Tab>
-                            <Tab key="withdraw" title="Withdraw">
-                              <div className="space-y-4 py-4">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Amount to withdraw</span>
-                                  <span className="text-sm font-medium">{`${withdrawAmount} SOL`}</span>
-                                </div>
-                                <Slider
-                                  aria-label="Withdraw amount"
-                                  maxValue={balance ? balance / LAMPORTS_PER_SOL : 0}
-                                  minValue={0}
-                                  step={0.1}
-                                  value={withdrawAmount}
-                                  onChange={(value) => setWithdrawAmount(value as number)}
-                                  className="w-full"
-                                />
-                                <Button
-                                  color="primary"
-                                  variant="bordered"
-                                  className="w-full"
-                                  isDisabled={true} //withdrawAmount <= 0}
-                                >
-                                  Withdraw {withdrawAmount} SOL
-                                </Button>
-                              </div>
-                            </Tab>
-                          </Tabs>
-                        </AccordionItem>
-                      </Accordion>
                     </div>
                   </div>
                 ) : session.status === 'authenticated' ? (

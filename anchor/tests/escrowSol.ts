@@ -102,7 +102,7 @@ describe('Escrow Sol', () => {
 
   it('Can initialize an escrow account', async () => {
     const [escrowPda, escrowBump] = deriveEscrowPda(userWallet.publicKey);
-    const depositAmount = new anchor.BN(10 * LAMPORTS_PER_SOL);
+    const depositAmount = new anchor.BN(5 * LAMPORTS_PER_SOL);
 
     await program.methods.deposit(depositAmount)
       .accountsStrict({
@@ -119,6 +119,26 @@ describe('Escrow Sol', () => {
     assert(escrowAccount.amountLamports.toString() === depositAmount.toString(), 'Incorrect Amount');
     assert(escrowAccount.holdCounter.toString() === '0', 'Hold counter should be 0');
   });
+
+  it('Can make a multiple deposits', async () => {
+     const [escrowPda, escrowBump] = deriveEscrowPda(userWallet.publicKey);
+    const depositAmount = new anchor.BN(5 * LAMPORTS_PER_SOL);
+
+    await program.methods.deposit(depositAmount)
+      .accountsStrict({
+        signer: userWallet.publicKey,
+        escrow: escrowPda,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .signers([userWallet])
+      .rpc({ commitment: 'confirmed' });
+
+    const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+    assert(escrowAccount.authority.toString() === userWallet.publicKey.toString(), 'Incorrect Authority');
+    assert(escrowAccount.bump === escrowBump, 'Incorrect Bump');
+    assert(escrowAccount.amountLamports.toString() === (depositAmount.mul(new anchor.BN(2))).toString(), 'Incorrect Amount');
+    assert(escrowAccount.holdCounter.toString() === '0', 'Hold counter should be 0');
+  })
 
   it('Can initialize a hold account', async () => {
     const [escrowPda] = deriveEscrowPda(userWallet.publicKey);

@@ -17,7 +17,8 @@ escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+# cluster = "devnet"
+cluster = "localnet"
 wallet = "../secrets/wallet-dev.json"
 
 [scripts]
