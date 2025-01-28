@@ -511,33 +511,6 @@ export default function ChatLlmScreen({ product }: Props) {
     await fetchBalance();
   };
 
-  const handleEscrowSol = async () => {
-    // if (!isConnected) throw new Error('Wallet not connected');
-    // const { escrowAccount } = await getEscrowAccount({ provider });
-    // const { amountLamports } = escrowAccount;
-    // const { configAccount } = await getConfigAccount({ provider });
-    // const { rateLamports } = configAccount;
-    // const prevMessagesTokens = messages.reduce((total, msg) => {
-    //   const roleOverhead = 4;
-    //   return total + roleOverhead + countLlmTokens(msg.content);
-    // }, 0);
-    // const currMessageTokens = countLlmTokens(input);
-    // // 10% buffer - don't worry, it will be refunded at close
-    // const totalTokens = (prevMessagesTokens + currMessageTokens + MAX_RESPONSE_TOKENS) * 1.1;
-    // if (amountLamports.lt(new anchor.BN(totalTokens * rateLamports.toNumber()))) {
-    //   throw new Error(
-    //     `Missing required lamports to conduct transaction. Required: ${
-    //       totalTokens * rateLamports.toNumber()
-    //     }, Available: ${amountLamports.toString()}`,
-    //   );
-    // }
-    // const holdRes = await hold({ provider, amountLlmTokens: totalTokens });
-    // const { holdAccount, holdCounter } = holdRes;
-    // const { escrowPda } = getEscrowPda(provider.publicKey);
-    // const holdAccountPda = getHoldPda(escrowPda, holdCounter.toNumber());
-    // return { holdPda: holdAccountPda.holdPda };
-  };
-
   const handleAuthenticatedSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
     chatRequestOptions?: ChatRequestOptions,
