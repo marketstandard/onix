@@ -51,13 +51,15 @@ import {
   useDisclosure,
 } from '@nextui-org/react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { SiSolana } from 'react-icons/si';
+import { toast } from 'react-toastify';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
 import { HistoryMode, historySelectionLabels } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
+import { getStaticAnchorProvider } from 'services/shared/solana';
 import {
   deposit,
   getConfigAccount,
@@ -437,6 +439,7 @@ export default function ChatLlmScreen({ product }: Props) {
         updateMessages(messages);
         generateTitle();
       }
+      fetchBalance();
     },
     onToolCall: (tool) => {
       // console.log('onToolCall', tool);
@@ -512,6 +515,48 @@ export default function ChatLlmScreen({ product }: Props) {
     await fetchBalance();
   };
 
+  const submitWithSignature = async (
+    e: React.FormEvent<HTMLFormElement>,
+    chatRequestOptions?: ChatRequestOptions,
+  ) => {
+    const body = {
+      publicKey: publicKey.toBase58(),
+    };
+
+    const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
+
+    const bodyWithSignature = {
+      ...body,
+      signature: Buffer.from(signature).toString('base64'),
+    };
+
+    handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
+    setIsNewChat(false);
+  };
+
+  const onClickDeposit = (
+    requiredLamports: number,
+    e: React.FormEvent<HTMLFormElement>,
+    chatRequestOptions?: ChatRequestOptions,
+  ) => {
+    onOpenSettings();
+
+    const checkInterval = setInterval(async () => {
+      const { escrowAccount: updatedEscrow } = await getEscrowAccount({
+        provider,
+        signerPublicKey: publicKey,
+      });
+
+      if (updatedEscrow && updatedEscrow.amountLamports.toNumber() >= requiredLamports) {
+        clearInterval(checkInterval);
+        await submitWithSignature(e, chatRequestOptions);
+        onOpenSettings();
+      }
+    }, 1000);
+
+    setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000);
+  };
+
   const handleAuthenticatedSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
     chatRequestOptions?: ChatRequestOptions,
@@ -524,19 +569,45 @@ export default function ChatLlmScreen({ product }: Props) {
 
     if (isConnected) {
       try {
-        const body = {
-          publicKey: publicKey.toBase58(),
-        };
+        const messageTokens = messages.reduce((total, msg) => {
+          const roleOverhead = 4;
+          return total + roleOverhead + countLlmTokens(msg.content);
+        }, 0);
+        const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
 
-        const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
+        const { configAccount } = await getConfigAccount({ provider });
+        const { escrowAccount } = await getEscrowAccount({
+          provider,
+          signerPublicKey: publicKey,
+        });
 
-        const bodyWithSignature = {
-          ...body,
-          signature: Buffer.from(signature).toString('base64'),
-        };
+        const requiredLamports = totalTokens * configAccount.rateLamports.toNumber();
+        const currentBalance = escrowAccount?.amountLamports?.toNumber() || 0;
 
-        handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
-        setIsNewChat(false);
+        if (!escrowAccount || currentBalance < requiredLamports) {
+          const toastId = toast.info(
+            <div className="flex w-full flex-col gap-2">
+              <span>Your account does not contain enough funds to send this transaction</span>
+              <div className="flex w-full items-center justify-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => onClickDeposit(requiredLamports, e, chatRequestOptions)}
+                >
+                  Deposit
+                </Button>
+                <Button size="sm" onClick={() => toast.dismiss(toastId)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>,
+            {
+              autoClose: false,
+            },
+          );
+        } else {
+          // If we have sufficient funds, submit right away
+          await submitWithSignature(e, chatRequestOptions);
+        }
       } catch (error) {
         console.error('Error escrowing sol:', error);
       }
