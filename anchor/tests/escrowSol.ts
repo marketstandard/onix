@@ -221,6 +221,31 @@ describe('Escrow Sol', () => {
     );
   });
 
+  it('Cannot create hold account unless config authority', async () => {
+    const [escrowPda] = deriveEscrowPda(userWallet.publicKey);
+    const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+    const holdCounter = escrowAccount.holdCounter.toNumber();
+    const [holdPda] = deriveHoldPda(escrowPda, holdCounter);
+    const holdAmount = new anchor.BN(1);
+
+    try {
+      await program.methods.hold(holdAmount)
+        .accountsStrict({
+          signer: thirdPartyWallet.publicKey,
+          escrow: escrowPda,
+          config: configPda,
+          hold: holdPda,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .signers([thirdPartyWallet])
+        .rpc({ commitment: 'confirmed' });
+
+      assert(false, 'Should not be able to create hold account unless config authority');
+    } catch (error) {
+      assert(error.toString().includes('InvalidAuthority'));
+    }
+  });
+
   it('3rd party cannot release hold', async () => {
     const [escrowPda] = deriveEscrowPda(userWallet.publicKey);
     const [holdPda] = deriveHoldPda(escrowPda, 0);
