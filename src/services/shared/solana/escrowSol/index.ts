@@ -44,13 +44,13 @@ export const getEscrowPda = (authority: PublicKey) => {
 
 export const getEscrowAccount = async ({
   provider,
-  signer,
+  signerPublicKey,
 }: {
   provider: anchor.Provider;
-  signer?: Keypair;
+  signerPublicKey?: PublicKey;
 }) => {
   const program = initEscrowSolProgram(provider);
-  const { escrowPda } = getEscrowPda(signer?.publicKey || provider.publicKey);
+  const { escrowPda } = getEscrowPda(signerPublicKey || provider.publicKey);
 
   try {
     const escrowAccount = await program?.account?.escrowAccount?.fetch(escrowPda);
