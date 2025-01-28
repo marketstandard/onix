@@ -7,7 +7,7 @@
 // import { ChatOpenAI } from '@langchain/openai';
 import * as ed25519 from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import {
   // LangChainAdapter,
   // StreamData,
@@ -19,13 +19,12 @@ import bs58 from 'bs58';
 // import { CheerioWebBaseLoader } from 'langchain/document_loaders/web/cheerio';
 // import * as mathjs from 'mathjs';
 import { Session } from 'next-auth';
-import * as tiktoken from 'tiktoken';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
 // import { z } from 'zod';
 // import { jsonGenAiComponentMappingDefinitions, jsonResponseSchema } from 'constants/genui';
 import { getModel } from 'services/server/ai';
 import { getStaticAnchorProvider } from 'services/shared/solana';
-import { debit, getConfigAccount, getHoldAccount } from 'services/shared/solana/escrowSol';
+import { debit, getConfigAccount, getHoldAccount, hold } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
 
 // Configure ed25519 with SHA-512
@@ -109,10 +108,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
   const session: Session = req?.auth;
   const payload = await req?.json();
 
-  console.log('session', session);
-  console.log('payload', payload);
-
-  const { messages, holdAccountPda, publicKey, signature } = payload;
+  const { messages, publicKey, signature } = payload;
 
   const keypair = Keypair.fromSecretKey(
     Uint8Array.from(JSON.parse(process.env.WALLET_PRIVATE_KEY!)),
@@ -121,19 +117,18 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
 
   let messageTokens = 0;
   let billSolana = false;
+  let holdPda: PublicKey | null = null;
 
-  if (holdAccountPda || publicKey || signature) {
-    if (!holdAccountPda || !publicKey || !signature) {
+  if (publicKey || signature) {
+    if (!publicKey || !signature) {
       console.log('Incomplete credentials');
       return new Response('Incomplete Solana credentials', { status: 400 });
     }
 
     billSolana = true;
 
-    console.log('bill solana auth step', billSolana);
     try {
       const messageBody = {
-        holdAccountPda,
         publicKey,
       };
 
@@ -148,26 +143,20 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
         return new Response('Invalid signature', { status: 401 });
       }
 
-      const { holdAccount } = await getHoldAccount({ provider, holdPda: holdAccountPda });
-      const holdAccountBalance = holdAccount.amountLamports.toNumber();
-
       messageTokens = messages.reduce((total, msg) => {
         const roleOverhead = 4;
         return total + roleOverhead + countLlmTokens(msg.content);
       }, 0);
       const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
-      const { configAccount } = await getConfigAccount({ provider });
-      const rateLamports = configAccount.rateLamports.toNumber();
 
-      const totalRequiredLamports = totalTokens * rateLamports;
-      if (holdAccountBalance < totalRequiredLamports) {
-        console.log('Insufficient funds');
-
-        console.log('holdAccountBalance', holdAccountBalance);
-        console.log('totalRequiredLamports', totalRequiredLamports);
-
-        return new Response('Insufficient funds', { status: 400 });
-      }
+      // if valid signature, create hold account
+      const { holdAccount, holdPda: holdPdaFromHoldInstruction } = await hold({
+        provider,
+        signer: keypair,
+        amountLlmTokens: totalTokens,
+        ownerPublicKey: new PublicKey(publicKey),
+      });
+      holdPda = holdPdaFromHoldInstruction;
     } catch (error) {
       console.log('Signature verification error:', error);
       return new Response('Signature verification failed', { status: 401 });
@@ -278,7 +267,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
           provider,
           signer: keypair,
           amountLlmTokens: totalTokens,
-          holdPda: holdAccountPda,
+          holdPda: holdPda,
         });
 
         if (holdAccount !== null) throw new Error('Failed to debit and close hold account.');

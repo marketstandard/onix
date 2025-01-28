@@ -102,7 +102,7 @@ describe('Escrow Sol', () => {
 
   it('Can initialize an escrow account', async () => {
     const [escrowPda, escrowBump] = deriveEscrowPda(userWallet.publicKey);
-    const depositAmount = new anchor.BN(10 * LAMPORTS_PER_SOL);
+    const depositAmount = new anchor.BN(5 * LAMPORTS_PER_SOL);
 
     await program.methods.deposit(depositAmount)
       .accountsStrict({
@@ -119,6 +119,26 @@ describe('Escrow Sol', () => {
     assert(escrowAccount.amountLamports.toString() === depositAmount.toString(), 'Incorrect Amount');
     assert(escrowAccount.holdCounter.toString() === '0', 'Hold counter should be 0');
   });
+
+  it('Can make a multiple deposits', async () => {
+     const [escrowPda, escrowBump] = deriveEscrowPda(userWallet.publicKey);
+    const depositAmount = new anchor.BN(5 * LAMPORTS_PER_SOL);
+
+    await program.methods.deposit(depositAmount)
+      .accountsStrict({
+        signer: userWallet.publicKey,
+        escrow: escrowPda,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .signers([userWallet])
+      .rpc({ commitment: 'confirmed' });
+
+    const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+    assert(escrowAccount.authority.toString() === userWallet.publicKey.toString(), 'Incorrect Authority');
+    assert(escrowAccount.bump === escrowBump, 'Incorrect Bump');
+    assert(escrowAccount.amountLamports.toString() === (depositAmount.mul(new anchor.BN(2))).toString(), 'Incorrect Amount');
+    assert(escrowAccount.holdCounter.toString() === '0', 'Hold counter should be 0');
+  })
 
   it('Can initialize a hold account', async () => {
     const [escrowPda] = deriveEscrowPda(userWallet.publicKey);
@@ -219,6 +239,31 @@ describe('Escrow Sol', () => {
       escrowAfter.amountLamports.toString() === escrowBefore.amountLamports.add(holdBefore.amountLamports).toString(),
       'Incorrect amount after release'
     );
+  });
+
+  it('Cannot create hold account unless config authority', async () => {
+    const [escrowPda] = deriveEscrowPda(userWallet.publicKey);
+    const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+    const holdCounter = escrowAccount.holdCounter.toNumber();
+    const [holdPda] = deriveHoldPda(escrowPda, holdCounter);
+    const holdAmount = new anchor.BN(1);
+
+    try {
+      await program.methods.hold(holdAmount)
+        .accountsStrict({
+          signer: thirdPartyWallet.publicKey,
+          escrow: escrowPda,
+          config: configPda,
+          hold: holdPda,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .signers([thirdPartyWallet])
+        .rpc({ commitment: 'confirmed' });
+
+      assert(false, 'Should not be able to create hold account unless config authority');
+    } catch (error) {
+      assert(error.toString().includes('InvalidAuthority'));
+    }
   });
 
   it('3rd party cannot release hold', async () => {

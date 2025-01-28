@@ -46,18 +46,16 @@ pub mod escrow_sol {
         let escrow: &mut Account<EscrowAccount> = &mut ctx.accounts.escrow;
         escrow.authority = ctx.accounts.signer.key();
         escrow.bump = ctx.bumps.escrow;
-        escrow.amount_lamports = amount_lamports;
+        escrow.amount_lamports = escrow
+            .amount_lamports
+            .checked_add(amount_lamports)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
         escrow.hold_counter = 0;
 
         Ok(())
     }
 
     pub fn hold(ctx: Context<Hold>, amount_llm_tokens: u64) -> Result<()> {
-        require!(
-            ctx.accounts.signer.key() == ctx.accounts.escrow.authority,
-            ErrorCode::InvalidAuthority
-        );
-
         let escrow: &mut Account<EscrowAccount> = &mut ctx.accounts.escrow;
         let config: &Account<ConfigAccount> = &ctx.accounts.config;
         let hold: &mut Account<HoldAccount> = &mut ctx.accounts.hold;
@@ -248,7 +246,7 @@ pub struct Deposit<'info> {
 #[derive(Accounts)]
 #[instruction(amount_llm_tokens: u64)]
 pub struct Hold<'info> {
-    #[account(mut)]
+    #[account(mut, constraint = signer.key() == config.authority @ ErrorCode::InvalidAuthority)]
     pub signer: Signer<'info>,
     #[account(mut)]
     pub escrow: Account<'info, EscrowAccount>,

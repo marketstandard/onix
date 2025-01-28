@@ -51,12 +51,15 @@ import {
   useDisclosure,
 } from '@nextui-org/react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { SiSolana } from 'react-icons/si';
+import { toast } from 'react-toastify';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
 import { HistoryMode, historySelectionLabels } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
+import { getStaticAnchorProvider } from 'services/shared/solana';
 import {
   deposit,
   getConfigAccount,
@@ -436,6 +439,7 @@ export default function ChatLlmScreen({ product }: Props) {
         updateMessages(messages);
         generateTitle();
       }
+      fetchBalance();
     },
     onToolCall: (tool) => {
       // console.log('onToolCall', tool);
@@ -502,48 +506,55 @@ export default function ChatLlmScreen({ product }: Props) {
     fetchBalance();
   }, [isConnected, provider]);
 
-  const handleDeposit = async () => {
-    if (!isConnected || !depositAmount) return;
+  const handleDeposit = async (amount: number) => {
+    if (!isConnected || !amount) return;
 
-    const amountLamports = depositAmount * LAMPORTS_PER_SOL;
+    const amountLamports = amount * LAMPORTS_PER_SOL;
     await deposit({ provider, amountLamports });
 
     await fetchBalance();
   };
 
-  const handleEscrowSol = async () => {
-    if (!isConnected) throw new Error('Wallet not connected');
+  const submitWithSignature = async (
+    e: React.FormEvent<HTMLFormElement>,
+    chatRequestOptions?: ChatRequestOptions,
+  ) => {
+    const body = {
+      publicKey: publicKey.toBase58(),
+    };
 
-    const { escrowAccount } = await getEscrowAccount({ provider });
-    const { amountLamports } = escrowAccount;
+    const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
 
-    const { configAccount } = await getConfigAccount({ provider });
-    const { rateLamports } = configAccount;
+    const bodyWithSignature = {
+      ...body,
+      signature: Buffer.from(signature).toString('base64'),
+    };
 
-    const prevMessagesTokens = messages.reduce((total, msg) => {
-      const roleOverhead = 4;
-      return total + roleOverhead + countLlmTokens(msg.content);
-    }, 0);
-    const currMessageTokens = countLlmTokens(input);
-    // 10% buffer - don't worry, it will be refunded at close
-    const totalTokens = (prevMessagesTokens + currMessageTokens + MAX_RESPONSE_TOKENS) * 1.1;
+    handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
+    setIsNewChat(false);
+  };
 
-    if (amountLamports.lt(new anchor.BN(totalTokens * rateLamports.toNumber()))) {
-      throw new Error(
-        `Missing required lamports to conduct transaction. Required: ${
-          totalTokens * rateLamports.toNumber()
-        }, Available: ${amountLamports.toString()}`,
-      );
-    }
+  const onClickDeposit = (
+    requiredLamports: number,
+    e: React.FormEvent<HTMLFormElement>,
+    chatRequestOptions?: ChatRequestOptions,
+  ) => {
+    onOpenSettings();
 
-    const holdRes = await hold({ provider, amountLlmTokens: totalTokens });
+    const checkInterval = setInterval(async () => {
+      const { escrowAccount: updatedEscrow } = await getEscrowAccount({
+        provider,
+        signerPublicKey: publicKey,
+      });
 
-    const { holdAccount, holdCounter } = holdRes;
+      if (updatedEscrow && updatedEscrow.amountLamports.toNumber() >= requiredLamports) {
+        clearInterval(checkInterval);
+        await submitWithSignature(e, chatRequestOptions);
+        onOpenSettings();
+      }
+    }, 1000);
 
-    const { escrowPda } = getEscrowPda(provider.publicKey);
-    const holdAccountPda = getHoldPda(escrowPda, holdCounter.toNumber());
-
-    return { holdPda: holdAccountPda.holdPda };
+    setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000);
   };
 
   const handleAuthenticatedSubmit = async (
@@ -558,22 +569,45 @@ export default function ChatLlmScreen({ product }: Props) {
 
     if (isConnected) {
       try {
-        const { holdPda } = await handleEscrowSol();
+        const messageTokens = messages.reduce((total, msg) => {
+          const roleOverhead = 4;
+          return total + roleOverhead + countLlmTokens(msg.content);
+        }, 0);
+        const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
 
-        const body = {
-          holdAccountPda: holdPda.toBase58(),
-          publicKey: publicKey.toBase58(),
-        };
+        const { configAccount } = await getConfigAccount({ provider });
+        const { escrowAccount } = await getEscrowAccount({
+          provider,
+          signerPublicKey: publicKey,
+        });
 
-        const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
+        const requiredLamports = totalTokens * configAccount.rateLamports.toNumber();
+        const currentBalance = escrowAccount?.amountLamports?.toNumber() || 0;
 
-        const bodyWithSignature = {
-          ...body,
-          signature: Buffer.from(signature).toString('base64'),
-        };
-
-        handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
-        setIsNewChat(false);
+        if (!escrowAccount || currentBalance < requiredLamports) {
+          const toastId = toast.info(
+            <div className="flex w-full flex-col gap-2">
+              <span>Your account does not contain enough funds to send this transaction</span>
+              <div className="flex w-full items-center justify-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => onClickDeposit(requiredLamports, e, chatRequestOptions)}
+                >
+                  Deposit
+                </Button>
+                <Button size="sm" onClick={() => toast.dismiss(toastId)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>,
+            {
+              autoClose: false,
+            },
+          );
+        } else {
+          // If we have sufficient funds, submit right away
+          await submitWithSignature(e, chatRequestOptions);
+        }
       } catch (error) {
         console.error('Error escrowing sol:', error);
       }
@@ -1890,68 +1924,72 @@ export default function ChatLlmScreen({ product }: Props) {
                         <div className="text-2xl font-semibold">
                           {balance ? `${balance / LAMPORTS_PER_SOL} SOL` : '0.00 SOL'}
                         </div>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(0.1)}
+                            >
+                              +0.1 <SiSolana />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(0.25)}
+                            >
+                              +0.25 <SiSolana />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(0.5)}
+                            >
+                              +0.5 <SiSolana />
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="text-xs"
+                              variant="flat"
+                              onClick={() => handleDeposit(1)}
+                            >
+                              +1.0 <SiSolana />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              classNames={{
+                                input: 'text-xs',
+                                base: 'min-h-unit-8',
+                              }}
+                              type="number"
+                              size="sm"
+                              placeholder="Custom amount"
+                              value={depositAmount?.toString() || ''}
+                              onChange={(e) => setDepositAmount(Number(e.target.value))}
+                              startContent={
+                                <div className="pointer-events-none flex items-center">
+                                  <span className="text-xs text-default-400">
+                                    <SiSolana />
+                                  </span>
+                                </div>
+                              }
+                            />
+                            <Button
+                              size="sm"
+                              className="text-xs text-black"
+                              color="primary"
+                              isDisabled={!depositAmount || depositAmount <= 0}
+                              onClick={() => handleDeposit(depositAmount)}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <Accordion>
-                        <AccordionItem
-                          key="1"
-                          aria-label="Manage SOL"
-                          title="Manage SOL"
-                          className="px-0 text-sm"
-                        >
-                          <Tabs aria-label="SOL management options" fullWidth>
-                            <Tab key="deposit" title="Deposit">
-                              <div className="space-y-4 py-4">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Amount to deposit</span>
-                                  <span className="text-sm font-medium">{`${depositAmount} SOL`}</span>
-                                </div>
-                                <Slider
-                                  aria-label="Deposit amount"
-                                  maxValue={10}
-                                  minValue={0}
-                                  step={0.1}
-                                  value={depositAmount}
-                                  onChange={(value) => setDepositAmount(value as number)}
-                                  className="w-full"
-                                />
-                                <Button
-                                  color="primary"
-                                  className="w-full font-semibold text-black"
-                                  isDisabled={depositAmount <= 0}
-                                  onClick={handleDeposit}
-                                >
-                                  Deposit {depositAmount} SOL
-                                </Button>
-                              </div>
-                            </Tab>
-                            <Tab key="withdraw" title="Withdraw">
-                              <div className="space-y-4 py-4">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Amount to withdraw</span>
-                                  <span className="text-sm font-medium">{`${withdrawAmount} SOL`}</span>
-                                </div>
-                                <Slider
-                                  aria-label="Withdraw amount"
-                                  maxValue={balance ? balance / LAMPORTS_PER_SOL : 0}
-                                  minValue={0}
-                                  step={0.1}
-                                  value={withdrawAmount}
-                                  onChange={(value) => setWithdrawAmount(value as number)}
-                                  className="w-full"
-                                />
-                                <Button
-                                  color="primary"
-                                  variant="bordered"
-                                  className="w-full"
-                                  isDisabled={true} //withdrawAmount <= 0}
-                                >
-                                  Withdraw {withdrawAmount} SOL
-                                </Button>
-                              </div>
-                            </Tab>
-                          </Tabs>
-                        </AccordionItem>
-                      </Accordion>
                     </div>
                   </div>
                 ) : session.status === 'authenticated' ? (
