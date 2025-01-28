@@ -1,8 +1,9 @@
-import NextAuth, { DefaultSession } from 'next-auth';
+import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
 
 declare module 'next-auth' {
   interface Session {
     user: {
+      publicKey?: string;
       stripeCustomerId: string;
       hasActiveSubscription?: boolean;
       subscriptions: {
@@ -13,5 +14,13 @@ declare module 'next-auth' {
         currentPeriodEnd: string;
       }[];
     } & DefaultSession['user'];
+  }
+
+  interface User extends DefaultUser {
+    publicKey?: string;
+  }
+
+  interface JWT {
+    publicKey?: string;
   }
 }
