@@ -386,7 +386,6 @@ export default function ChatLlmScreen({ product }: Props) {
     activeChat,
     setActiveChatId,
     startNewChat,
-    generateTitle,
     updateMessages,
     setHistoryMode,
     historyMode,
@@ -419,17 +418,7 @@ export default function ChatLlmScreen({ product }: Props) {
     setInput,
   } = useChat({
     initialMessages: activeChat?.messages || undefined,
-    onResponse: (response) => {
-      console.log('onResponse', response);
-      if (response) {
-        updateMessages(messages);
-      }
-    },
     onFinish: (response) => {
-      if (response) {
-        updateMessages(messages);
-        generateTitle();
-      }
       fetchBalance();
     },
     onToolCall: (tool) => {
@@ -439,17 +428,24 @@ export default function ChatLlmScreen({ product }: Props) {
   });
 
   useEffect(() => {
-    if (!!messages?.length) {
-      updateMessages(messages);
-    }
-  }, [messages]);
-
-  useEffect(() => {
     if (!isLoadingMessages && !!messages?.length) {
-      updateMessages(messages);
-      generateTitle();
+      // @ts-ignore
+      const title = data?.find((item) => item.type === 'title')?.title;
+      updateMessages(messages, title);
     }
   }, [isLoadingMessages, messages]);
+
+  useEffect(() => {
+    if (data && data.length && !activeChat?.title) {
+      // @ts-ignore
+      const title = data.find((item) => item.type === 'title');
+      // @ts-ignore
+      if (title?.title) {
+        // @ts-ignore
+        setTitle(title.title.trim());
+      }
+    }
+  }, [data, activeChat?.title]);
 
   useEffect(() => {
     if (isNewChat) {
@@ -598,6 +594,7 @@ export default function ChatLlmScreen({ product }: Props) {
               </div>,
               {
                 autoClose: false,
+                position: 'bottom-center',
               },
             );
           } else {
