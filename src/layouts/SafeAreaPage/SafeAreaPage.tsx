@@ -1,11 +1,9 @@
 import * as React from 'react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/solid';
-import { BLOG_PAGE } from 'constants/pages';
 import { CLIENT_PORTAL_PAGE } from 'constants/pages';
 import { Product } from 'types/generated/sanity';
 import { useModal } from 'hooks/useModal';
 import Button from 'components/Button';
-// import CommandCenter from 'components/CommandPalette';
 import Link from 'components/Link';
 import SidebarNav from 'components/SidebarNav';
 import classNames from 'styles/utils/classNames';
