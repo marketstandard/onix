@@ -56,7 +56,8 @@ import { useRouter } from 'next/router';
 import { SiSolana } from 'react-icons/si';
 import { toast } from 'react-toastify';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
-import { HistoryMode, historySelectionLabels } from 'constants/chat';
+import { FAQS, HistoryMode, ROADMAP_ITEMS, historySelectionLabels } from 'constants/chat';
+import { DEFAULT_MODELS, FINE_TUNE_MODELS, HistoryTabs, PRESETS, Preset } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
 import { deposit, getConfigAccount, getEscrowAccount } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
@@ -86,130 +87,6 @@ const SHOULD_SHOW_TOP_BAR = false;
 const SHOULD_SHOW_SIDE_CONTROLS = false;
 const NEW_CHAT_NAME = 'New chat';
 const sidebarWidth = 288;
-
-enum HistoryTabs {
-  All = 'all',
-  Pinned = 'pinned',
-}
-
-type Preset = {
-  id: string;
-  name: string;
-};
-
-const ROADMAP_ITEMS = [
-  'API access',
-  'Business and organization structures',
-  'Mobile and desktop apps',
-  'Chat export',
-  'Encrypted cloud storage',
-  'Generative UI',
-  'Voice chat with AI',
-  'Artifacts',
-  'Custom models',
-  'AI agents and plugins',
-  'Vector database management',
-  'Chat search',
-  'Blockchain storage and payments',
-];
-
-const FAQS = [
-  {
-    title: 'What is open source code?',
-    content:
-      'This means the code is available publicly for anyone to see. This improves privacy and security because it allows you to audit the code and verify all of our claims. It also makes our website more secure because we receive bug reports from the open source community.',
-  },
-  {
-    title: 'What are you doing to become more private?',
-    content:
-      'Currently we store the absolute minimum amount of data to prevent abuse and keep the site running. To be even more private, we will integrate the blockchain so that you only need a cryptocurrency wallet to use the site and you can pre-buy usage tokens. See our roadmap for more details on our current and future plans.',
-  },
-  {
-    title: "Why can't I acccess my conversation data on other devices?",
-    content:
-      'To build trust and keep data completely private, we store currently conversations on your device, not in the cloud. This gives you full control. We are currently implementing the ability to export your conversations to other devices or store it in our encrypted cloud storage.',
-  },
-  {
-    title: 'Do you use any analytics?',
-    content:
-      'We use a privacy-focused and completely anonymous tool that stores no cookies. It gives us anonymous usage data so we can understand the number site visitors.',
-  },
-  {
-    title: 'Are you HIPAA and SOC2 compliant?',
-    content:
-      'We are in the process of becoming HIPAA and SOC2 compliant. With our strict practices around privacy and radically minimal data storage, we are already compliant with HIPAA and SOC2 and must pass the audits and receive the certifications as a final step.',
-  },
-  {
-    title: 'Do you offer API access?',
-    content:
-      'We are quickly developing an API that will allow you to access our private AI from your applications or websites.',
-  },
-  {
-    title: 'How do you work with startups, businesses, and enterprise clients?',
-    content:
-      "The private LLM is perfectly suited for business and enterprise clients, ensuring your data is always secured. We offer on-premise deployments so the data never leaves your organization's control",
-  },
-];
-
-const presets: Preset[] = [
-  {
-    id: '1',
-    name: 'Preset 1',
-  },
-  {
-    id: '2',
-    name: 'Preset 2',
-  },
-  {
-    id: '3',
-    name: 'Preset 3',
-  },
-  {
-    id: '4',
-    name: 'Preset 4',
-  },
-  {
-    id: '5',
-    name: 'Preset 5',
-  },
-  {
-    id: '6',
-    name: 'Preset 6',
-  },
-  {
-    id: '7',
-    name: 'Preset 7',
-  },
-  {
-    id: '8',
-    name: 'Preset 8',
-  },
-  {
-    id: '9',
-    name: 'Preset 9',
-  },
-  {
-    id: '10',
-    name: 'Preset 10',
-  },
-];
-
-const DEFAULT_MODELS = [
-  'gpt-4',
-  'gpt-3.5-turbo',
-  'gpt-3.5-turbo-16k',
-  'babbage-002',
-  'davinci-002',
-];
-
-const fineTuneModels = [
-  'personal::gpt-3',
-  'personal::gpt-3-16k',
-  'personal::gpt-3-16k-2',
-  'personal::gpt-3-16k-3',
-  'personal::gpt-3-16k-4',
-  'personal::gpt-3-16k-5',
-];
 
 /**
  * @todo Abstract this to be universially usable to keep client/server events in sync
@@ -416,6 +293,7 @@ export default function ChatLlmScreen({ product }: Props) {
     isLoading: isLoadingMessages,
     setMessages,
     setInput,
+    setData,
   } = useChat({
     initialMessages: activeChat?.messages || undefined,
     onFinish: (response) => {
@@ -456,7 +334,7 @@ export default function ChatLlmScreen({ product }: Props) {
   }, [isNewChat]);
 
   const onSelectedPresetChange = (key: React.Key) => {
-    const preset = presets.find((preset) => preset.id === key);
+    const preset = PRESETS.find((preset) => preset.id === key);
 
     if (!preset) {
       return;
@@ -501,25 +379,6 @@ export default function ChatLlmScreen({ product }: Props) {
 
     await fetchBalance();
   };
-
-  // const submitWithSignature = async (
-  //   e: React.FormEvent<HTMLFormElement>,
-  //   chatRequestOptions?: ChatRequestOptions,
-  // ) => {
-  //   const body = {
-  //     publicKey: publicKey.toBase58(),
-  //   };
-
-  //   const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
-
-  //   const bodyWithSignature = {
-  //     ...body,
-  //     signature: Buffer.from(signature).toString('base64'),
-  //   };
-
-  //   handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
-  //   setIsNewChat(false);
-  // };
 
   const onClickDeposit = (
     requiredLamports: number,
@@ -598,12 +457,18 @@ export default function ChatLlmScreen({ product }: Props) {
               },
             );
           } else {
+            if (isNewChat) {
+              setData([]);
+            }
             handleSubmit(e, chatRequestOptions);
           }
         } catch (error) {
           console.error('Error escrowing sol:', error);
         }
       } else {
+        if (isNewChat) {
+          setData([]);
+        }
         handleSubmit(e, { ...chatRequestOptions });
         setIsNewChat(false);
       }
@@ -633,7 +498,7 @@ export default function ChatLlmScreen({ product }: Props) {
           ))}
         </SelectSection>
         <SelectSection title="Fine Tunes">
-          {fineTuneModels.map((fineTunedModel) => (
+          {FINE_TUNE_MODELS.map((fineTunedModel) => (
             <SelectItem key={fineTunedModel}>{fineTunedModel}</SelectItem>
           ))}
         </SelectSection>
@@ -993,9 +858,6 @@ export default function ChatLlmScreen({ product }: Props) {
                   />
                 </form>
               </div>
-              {/* <div className="mt-8">
-                    <Button onPress={onOpenPricing}>Create a Subscription for Full Access</Button>
-                  </div> */}
             </div>
             <div className="absolute left-0 top-0 h-full w-full pl-0 lg:pl-side-nav">
               <Stars className="h-full w-full" />
@@ -1269,14 +1131,6 @@ export default function ChatLlmScreen({ product }: Props) {
                 ))}
               </div>
             </section>
-            {/* <section className="relative">
-              <SectionCallout className="">PRICING</SectionCallout>
-              <SectionTitle className="mt-4 text-center">Get unlimited access</SectionTitle>
-              <p className="mx-auto mt-6 max-w-2xl text-center text-text-secondary-darkmode">
-                For less than $5 per week, you can solve any problem while keeping your privacy.
-              </p>
-              <div>Pricing cards</div>
-            </section> */}
             <section className="relative pt-14">
               <SectionCallout className="mt-36">FAQ</SectionCallout>
               <SectionTitle className="mt-4 text-center">Frequently Asked Questions</SectionTitle>
@@ -1378,7 +1232,7 @@ export default function ChatLlmScreen({ product }: Props) {
                       onSelectedPresetChange(e.target.value);
                     }}
                   >
-                    {presets.map((preset) => (
+                    {PRESETS.map((preset) => (
                       <SelectItem key={preset.id}>{preset.name}</SelectItem>
                     ))}
                   </Select>
@@ -1500,6 +1354,18 @@ export default function ChatLlmScreen({ product }: Props) {
                 >
                   Project{activeChatProject ? `: ${activeChatProject.title}` : ''}
                 </Button>
+                <div className="ml-4">
+                  <Button
+                    as="a"
+                    href={GITHUB_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="sm"
+                    startContent={<Github className="w-4" />}
+                  >
+                    View Code on Github
+                  </Button>
+                </div>
               </div>
             </div>
 
