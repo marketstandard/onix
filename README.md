@@ -60,13 +60,13 @@ Examples include:
 
 Chat with an AI that understands context and provides helpful, human-like responses:
 
-![Chat Example](https://github.com/marketstandard/onix/public/images/chat-example.png)
+![Chat Example](https://raw.githubusercontent.com/marketstandard/onix/refs/heads/main/public/images/chat-example.png)
 
 ### Secure Authentication
 
 Connect securely using wallet-based authentication:
 
-![Wallet Verification](https://github.com/marketstandard/onix/public/images/verify-wallet.png)
+![Wallet Verification](https://raw.githubusercontent.com/marketstandard/onix/refs/heads/main/public/images/verify-wallet.png)
 
 ## Roadmap
 
