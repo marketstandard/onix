@@ -24,7 +24,7 @@ import { MAX_RESPONSE_TOKENS } from 'constants/app';
 // import { jsonGenAiComponentMappingDefinitions, jsonResponseSchema } from 'constants/genui';
 import { getModel } from 'services/server/ai';
 import { getStaticAnchorProvider } from 'services/shared/solana';
-import { debit, getConfigAccount, getHoldAccount, hold } from 'services/shared/solana/escrowSol';
+import { debit, hold } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
 
 // Configure ed25519 with SHA-512
@@ -108,7 +108,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
   const session: Session = req?.auth;
   const payload = await req?.json();
 
-  const { messages, publicKey, signature } = payload;
+  const { messages } = payload;
 
   const keypair = Keypair.fromSecretKey(
     Uint8Array.from(JSON.parse(process.env.WALLET_PRIVATE_KEY!)),
@@ -118,49 +118,26 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
   let messageTokens = 0;
   let billSolana = false;
   let holdPda: PublicKey | null = null;
+  const publicKey = session?.user?.publicKey;
 
-  if (publicKey || signature) {
-    if (!publicKey || !signature) {
-      console.log('Incomplete credentials');
-      return new Response('Incomplete Solana credentials', { status: 400 });
-    }
-
+  if (publicKey) {
     billSolana = true;
 
-    try {
-      const messageBody = {
-        publicKey,
-      };
+    // compute # of tokens
+    messageTokens = messages.reduce((total, msg) => {
+      const roleOverhead = 4;
+      return total + roleOverhead + countLlmTokens(msg.content);
+    }, 0);
+    const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
 
-      const signatureUint8Array = new Uint8Array(Buffer.from(signature, 'base64'));
-      const messageUint8Array = new TextEncoder().encode(JSON.stringify(messageBody));
-      const publicKeyBytes = bs58.decode(publicKey);
-
-      const isValid = ed25519.verify(signatureUint8Array, messageUint8Array, publicKeyBytes);
-
-      if (!isValid) {
-        console.log('Invalid signature');
-        return new Response('Invalid signature', { status: 401 });
-      }
-
-      messageTokens = messages.reduce((total, msg) => {
-        const roleOverhead = 4;
-        return total + roleOverhead + countLlmTokens(msg.content);
-      }, 0);
-      const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
-
-      // if valid signature, create hold account
-      const { holdAccount, holdPda: holdPdaFromHoldInstruction } = await hold({
-        provider,
-        signer: keypair,
-        amountLlmTokens: totalTokens,
-        ownerPublicKey: new PublicKey(publicKey),
-      });
-      holdPda = holdPdaFromHoldInstruction;
-    } catch (error) {
-      console.log('Signature verification error:', error);
-      return new Response('Signature verification failed', { status: 401 });
-    }
+    // create hold account
+    const { holdPda: holdPdaFromHoldInstruction } = await hold({
+      provider,
+      signer: keypair,
+      amountLlmTokens: totalTokens,
+      ownerPublicKey: new PublicKey(publicKey),
+    });
+    holdPda = holdPdaFromHoldInstruction;
   } else if (!session?.user) {
     return new Response('Unauthorized', { status: 401 });
   }

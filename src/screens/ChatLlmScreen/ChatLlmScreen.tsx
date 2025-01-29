@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Message, useChat } from '@ai-sdk/react';
+import { useChat } from '@ai-sdk/react';
 import { ChatRequestOptions } from '@ai-sdk/ui-utils';
-import * as anchor from '@coral-xyz/anchor';
 import {
   AdjustmentsVerticalIcon,
   InformationCircleIcon,
@@ -51,7 +50,7 @@ import {
   useDisclosure,
 } from '@nextui-org/react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { SiSolana } from 'react-icons/si';
@@ -59,15 +58,7 @@ import { toast } from 'react-toastify';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
 import { HistoryMode, historySelectionLabels } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
-import { getStaticAnchorProvider } from 'services/shared/solana';
-import {
-  deposit,
-  getConfigAccount,
-  getEscrowAccount,
-  getEscrowPda,
-  getHoldPda,
-  hold,
-} from 'services/shared/solana/escrowSol';
+import { deposit, getConfigAccount, getEscrowAccount } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
 import { KeyCodes } from 'utils/client/dom';
 import { useBrowserStorage } from 'context/storage/BrowserStorageContext';
@@ -515,30 +506,32 @@ export default function ChatLlmScreen({ product }: Props) {
     await fetchBalance();
   };
 
-  const submitWithSignature = async (
-    e: React.FormEvent<HTMLFormElement>,
-    chatRequestOptions?: ChatRequestOptions,
-  ) => {
-    const body = {
-      publicKey: publicKey.toBase58(),
-    };
+  // const submitWithSignature = async (
+  //   e: React.FormEvent<HTMLFormElement>,
+  //   chatRequestOptions?: ChatRequestOptions,
+  // ) => {
+  //   const body = {
+  //     publicKey: publicKey.toBase58(),
+  //   };
 
-    const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
+  //   const signature = await signMessage(new TextEncoder().encode(JSON.stringify(body)));
 
-    const bodyWithSignature = {
-      ...body,
-      signature: Buffer.from(signature).toString('base64'),
-    };
+  //   const bodyWithSignature = {
+  //     ...body,
+  //     signature: Buffer.from(signature).toString('base64'),
+  //   };
 
-    handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
-    setIsNewChat(false);
-  };
+  //   handleSubmit(e, { ...chatRequestOptions, body: bodyWithSignature });
+  //   setIsNewChat(false);
+  // };
 
   const onClickDeposit = (
     requiredLamports: number,
     e: React.FormEvent<HTMLFormElement>,
     chatRequestOptions?: ChatRequestOptions,
   ) => {
+    e.preventDefault();
+
     onOpenSettings();
 
     const checkInterval = setInterval(async () => {
@@ -549,7 +542,7 @@ export default function ChatLlmScreen({ product }: Props) {
 
       if (updatedEscrow && updatedEscrow.amountLamports.toNumber() >= requiredLamports) {
         clearInterval(checkInterval);
-        await submitWithSignature(e, chatRequestOptions);
+        handleSubmit(e, chatRequestOptions);
         onOpenSettings();
       }
     }, 1000);
@@ -567,56 +560,59 @@ export default function ChatLlmScreen({ product }: Props) {
       return;
     }
 
-    if (isConnected) {
-      try {
-        const messageTokens = messages.reduce((total, msg) => {
-          const roleOverhead = 4;
-          return total + roleOverhead + countLlmTokens(msg.content);
-        }, 0);
-        const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
+    const sessionPublicKey = session?.data?.user?.publicKey;
 
-        const { configAccount } = await getConfigAccount({ provider });
-        const { escrowAccount } = await getEscrowAccount({
-          provider,
-          signerPublicKey: publicKey,
-        });
+    if (session.status === 'authenticated') {
+      if (sessionPublicKey) {
+        try {
+          const messageTokens = messages.reduce((total, msg) => {
+            const roleOverhead = 4;
+            return total + roleOverhead + countLlmTokens(msg.content);
+          }, 0);
+          const totalTokens = messageTokens + MAX_RESPONSE_TOKENS;
 
-        const requiredLamports = totalTokens * configAccount.rateLamports.toNumber();
-        const currentBalance = escrowAccount?.amountLamports?.toNumber() || 0;
+          const { configAccount } = await getConfigAccount({ provider });
+          const { escrowAccount } = await getEscrowAccount({
+            provider,
+            signerPublicKey: publicKey,
+          });
 
-        if (!escrowAccount || currentBalance < requiredLamports) {
-          const toastId = toast.info(
-            <div className="flex w-full flex-col gap-2">
-              <span>Your account does not contain enough funds to send this transaction</span>
-              <div className="flex w-full items-center justify-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => onClickDeposit(requiredLamports, e, chatRequestOptions)}
-                >
-                  Deposit
-                </Button>
-                <Button size="sm" onClick={() => toast.dismiss(toastId)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>,
-            {
-              autoClose: false,
-            },
-          );
-        } else {
-          // If we have sufficient funds, submit right away
-          await submitWithSignature(e, chatRequestOptions);
+          const requiredLamports = totalTokens * configAccount.rateLamports.toNumber();
+          const currentBalance = escrowAccount?.amountLamports?.toNumber() || 0;
+
+          if (!escrowAccount || currentBalance < requiredLamports) {
+            const toastId = toast.info(
+              <div className="flex w-full flex-col gap-2">
+                <span>Your account does not contain enough funds to send this transaction</span>
+                <div className="flex w-full items-center justify-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => onClickDeposit(requiredLamports, e, chatRequestOptions)}
+                  >
+                    Deposit
+                  </Button>
+                  <Button size="sm" onClick={() => toast.dismiss(toastId)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>,
+              {
+                autoClose: false,
+              },
+            );
+          } else {
+            handleSubmit(e, chatRequestOptions);
+          }
+        } catch (error) {
+          console.error('Error escrowing sol:', error);
         }
-      } catch (error) {
-        console.error('Error escrowing sol:', error);
+      } else {
+        handleSubmit(e, { ...chatRequestOptions });
+        setIsNewChat(false);
       }
-    } else if (session.status !== 'authenticated') {
+    } else {
       router.push('/signin');
       return;
-    } else {
-      handleSubmit(e, { ...chatRequestOptions });
-      setIsNewChat(false);
     }
   };
 
