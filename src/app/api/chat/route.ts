@@ -8,12 +8,7 @@
 import * as ed25519 from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import {
-  // LangChainAdapter,
-  // StreamData,
-  // StreamObjectResult,
-  streamText, // tool,
-} from 'ai';
+import { createDataStreamResponse, generateText, streamText } from 'ai';
 import { auth } from 'auth';
 import bs58 from 'bs58';
 // import { CheerioWebBaseLoader } from 'langchain/document_loaders/web/cheerio';
@@ -229,29 +224,53 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
    * @todo Look at using maxToolRoundtrips for generative UI
    */
 
-  const result = await streamText({
-    system: SYSTEM_MESSAGE,
-    model: getModel(),
-    // model: createOpenAI({})('gpt-3.5-turbo'),
-    messages,
-    // tools: TOOLS,
-    onFinish: async (completion) => {
-      if (billSolana) {
-        const finalTokenCount = countLlmTokens(completion.text);
-        const totalTokens = messageTokens + finalTokenCount;
+  // For first messages, we'll want to generate a title
+  const isFirstMessage = messages.length === 1;
 
-        const { holdAccount } = await debit({
-          provider,
-          signer: keypair,
-          amountLlmTokens: totalTokens,
-          holdPda: holdPda,
-        });
+  // Use createDataStreamResponse to handle both the chat response and title generation
+  return createDataStreamResponse({
+    execute: async (dataStream) => {
+      // Start the main chat response
+      const result = streamText({
+        system: SYSTEM_MESSAGE,
+        model: getModel(),
+        messages,
+        onFinish: async (completion) => {
+          if (billSolana) {
+            const finalTokenCount = countLlmTokens(completion.text);
+            const totalTokens = messageTokens + finalTokenCount;
 
-        if (holdAccount !== null) throw new Error('Failed to debit and close hold account.');
-      }
+            const { holdAccount } = await debit({
+              provider,
+              signer: keypair,
+              amountLlmTokens: totalTokens,
+              holdPda: holdPda,
+            });
+
+            if (holdAccount !== null) throw new Error('Failed to debit and close hold account.');
+          }
+
+          if (isFirstMessage) {
+            const titleResult = await generateText({
+              model: getModel(),
+              system: `You are a helpful assistant with a single purpose. You are to create simple, human-readables titles for conversations. The title should be short, accurate, and use plain language. The focus shoulld be on the users question, with some slight modification based on the response. You should use at most 6 words. Respond only with the title in plain text (NO MARKDOWN EVER) and nothing else. Don't use quotation marks or put the word "title" in the response. ALWAYS respond with some title and never an empty string. IN THE THREAD ARE THE MESSAGES OF THE CONVERATION THAT SHOULD GIVE A TITLE TO.`,
+              messages: [{ role: 'user', content: `Thread: ${JSON.stringify(messages, null, 2)}` }],
+              maxTokens: 100,
+            });
+
+            // Stream the title as additional data
+            dataStream.writeData({
+              type: 'title',
+              title: titleResult.text,
+            });
+          }
+        },
+      });
+
+      // Merge the chat response into the data stream
+      result.mergeIntoDataStream(dataStream);
     },
   });
-  return result.toDataStreamResponse();
 
   // const data = new StreamData();
 

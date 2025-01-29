@@ -1,20 +1,8 @@
 import React, { createContext, useContext, useEffect, useReducer, useState } from 'react';
-import { Message, useChat, useCompletion } from '@ai-sdk/react';
+import { Message } from '@ai-sdk/react';
 import { generateId } from '@ai-sdk/ui-utils';
 import { HistoryMode } from 'constants/chat';
-import {
-  Character,
-  Chat,
-  Checksum,
-  CustomModel,
-  InstalledPlugin,
-  Profile,
-  Project,
-  Schema,
-  Tag,
-  User,
-  UserPrompts,
-} from 'constants/schema/types';
+import { Project } from 'constants/schema/types';
 import {
   ChatDatabaseSchema,
   StoreNames,
@@ -25,7 +13,6 @@ import {
   initDB,
   initializeAppData,
 } from 'services/client/indexdb';
-import { useApiGateway } from 'hooks/useApi';
 
 type DatabaseState = {
   [Key in StoreNames]: ChatDatabaseSchema[Key]['value'][];
@@ -124,7 +111,6 @@ interface BrowserStorageContextType {
   activeChat: ChatDatabaseSchema['chats']['value'];
   setActiveChatId: (id: string) => void;
   startNewChat: () => void;
-  generateTitle: () => void;
   togglePinChat: (isPinned: boolean) => void;
   toggleIsSavingChat: () => void;
   setTags: (params: { chatId: string; tags: ChatDatabaseSchema['tags']['value'][] }) => void;
@@ -136,7 +122,7 @@ interface BrowserStorageContextType {
     project: Pick<Project, 'id' | 'title'>;
   }) => void;
   setTitle: (title: string) => void;
-  updateMessages: (messages: Message[]) => void;
+  updateMessages: (messages: Message[], title?: string) => void;
   setHistoryMode: (mode: HistoryMode) => void;
   historyMode: HistoryMode;
 }
@@ -149,15 +135,6 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const [state, dispatch] = useReducer(databaseReducer, initialState);
   const activeChatId = state.activeChatId;
   const activeChat = state.chats.find((c) => c.id === state.activeChatId);
-  // const {
-  //   completion,
-  //   complete,
-  //   isLoading: isLoadingTitle,
-  //   setCompletion,
-  // } = useCompletion({
-  //   api: '/api/title',
-  // });
-  const { post: complete, isLoading: isLoadingTitle } = useApiGateway('/title');
 
   useEffect(() => {
     const initializeStorage = async () => {
@@ -219,27 +196,6 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getAllItemsFromStore = async <Key extends StoreNames>(storeName: Key) => {
     return await getAllItems(storeName);
-  };
-
-  const generateTitle = async () => {
-    const id = state.activeChatId;
-    if (
-      activeChat &&
-      !activeChat.title &&
-      activeChat.messages.length > 1 &&
-      activeChat.messages.length < 4 &&
-      !isLoadingTitle
-    ) {
-      const contentForTitle = activeChat.messages.map((m) => m.content).join('\n\n');
-      const response = await complete({
-        payload: {
-          prompt: contentForTitle,
-        },
-      });
-      const title = response.data.text;
-      const updatedChat = { id, ...activeChat, title };
-      addChatToStore('chats', updatedChat);
-    }
   };
 
   const togglePinChat = async (isPinned: boolean) => {
@@ -347,7 +303,8 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
     await addItem('chats', chatItem);
   };
 
-  const updateMessages = async (messages: Message[]) => {
+  const updateMessages = async (messages: Message[], title?: string) => {
+    const activeChat = state.chats.find((i) => i.id === state.activeChatId);
     const hasActiveChat = !!activeChat;
     const isSavingChat = !!activeChat?.isSavingChat;
     const hasMessages = !!messages.length;
@@ -368,7 +325,7 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
     const id = state.activeChatId;
 
     if (id) {
-      const updatedChat = { id, ...activeChat, messages };
+      const updatedChat = { id, ...activeChat, messages, title: activeChat?.title || title };
       const now = new Date().toISOString();
 
       if (!updatedChat.createdAt) {
@@ -386,6 +343,7 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setTitle = async (title: string) => {
     const id = state.activeChatId;
+    const activeChat = state.chats.find((i) => i.id === id);
     if (activeChat) {
       const updatedChat = {
         id,
@@ -397,8 +355,8 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
         ...(findExistingItem || {}),
         ...updatedChat,
       };
-      dispatch({ type: 'ADD_ITEM', storeName: 'chats', item: newItem });
-      await addItem('chats', newItem);
+
+      addChatToStore('chats', newItem);
     }
   };
 
@@ -421,7 +379,6 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
       const newChatId = generateId();
       dispatch({ type: 'SET_ACTIVE_CHAT', id: newChatId });
     },
-    generateTitle,
     togglePinChat,
     toggleIsSavingChat,
     setTags,

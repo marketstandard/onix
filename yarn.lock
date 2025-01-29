@@ -15,13 +15,13 @@
     "@ai-sdk/provider" "0.0.23"
     "@ai-sdk/provider-utils" "1.0.19"
 
-"@ai-sdk/openai@^0.0.60":
-  version "0.0.60"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/openai/-/openai-0.0.60.tgz#ff6f6e6244f129c710a1ed3f68ed0d66e39b726d"
-  integrity sha512-NEdDdv3o76jT6UeWHxP6I/lMYcjFQhQGQi/U2gVqW1PEU4Pjaud7tAVSy27IPbiRakg6GOzWrltI2JhZgAI1wg==
+"@ai-sdk/openai@^1.1.5":
+  version "1.1.5"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/openai/-/openai-1.1.5.tgz#6d03802e8368b4be528fd51db32aa2e663724b13"
+  integrity sha512-pmZPeb99oWlV3PqMH5DVWtMGZgwWznInjdF0Bi4q1mKoEjomDXSYw+imvzMoSbpCrcGB9uFFTVx2VeR/jvcppg==
   dependencies:
-    "@ai-sdk/provider" "0.0.23"
-    "@ai-sdk/provider-utils" "1.0.19"
+    "@ai-sdk/provider" "1.0.6"
+    "@ai-sdk/provider-utils" "2.1.5"
 
 "@ai-sdk/provider-utils@1.0.18":
   version "1.0.18"
@@ -43,6 +43,16 @@
     nanoid "3.3.6"
     secure-json-parse "2.7.0"
 
+"@ai-sdk/provider-utils@2.1.5":
+  version "2.1.5"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-2.1.5.tgz#acceca29bef1ed3855789197c3b587e260f995d4"
+  integrity sha512-PcNR7E4ovZGV/J47gUqaFlvzorgca6uUfN5WzfXJSFWeOeLunN+oxRVwgUOwj0zbmO0yGQTHQD+FHVw8s3Rz8w==
+  dependencies:
+    "@ai-sdk/provider" "1.0.6"
+    eventsource-parser "^3.0.0"
+    nanoid "^3.3.8"
+    secure-json-parse "^2.7.0"
+
 "@ai-sdk/provider@0.0.23":
   version "0.0.23"
   resolved "https://registry.yarnpkg.com/@ai-sdk/provider/-/provider-0.0.23.tgz#a69a9103854bbfb500dddf0b44a399edf3db4735"
@@ -50,51 +60,31 @@
   dependencies:
     json-schema "0.4.0"
 
-"@ai-sdk/react@0.0.59", "@ai-sdk/react@^0.0.59":
-  version "0.0.59"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/react/-/react-0.0.59.tgz#deebc9072fed0861f4e33f70f7358d5217e62bc9"
-  integrity sha512-1WbgO3J2/OoheMuNMxy5itJ3NVqOpqpAQxFNp7AoXgnDv4wDF4kTif61rTlKh7dCPvBHj2HXLmob+TrVFaWhYw==
+"@ai-sdk/provider@1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider/-/provider-1.0.6.tgz#ab7e53a48a2cefe7bd593590a611b2ce12465bc3"
+  integrity sha512-hwj/gFNxpDgEfTaYzCYoslmw01IY9kWLKl/wf8xuPvHtQIzlfXWmmUwc8PnCwxyt8cKzIuV0dfUghCf68HQ0SA==
   dependencies:
-    "@ai-sdk/provider-utils" "1.0.19"
-    "@ai-sdk/ui-utils" "0.0.44"
-    swr "2.2.5"
+    json-schema "^0.4.0"
 
-"@ai-sdk/solid@0.0.47":
-  version "0.0.47"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/solid/-/solid-0.0.47.tgz#c88e99aeff0944ff32eb7a9ce1c80ab97f5d6070"
-  integrity sha512-lVMxIxtuNqoo/TObSFGflEP2dUeJv7bfPQbS4jHTZGBNlyhgBRY2Xc19yNjA3QKRfvQNDVoQusqxn+18MiHJJQ==
+"@ai-sdk/react@1.1.6", "@ai-sdk/react@^1.1.6":
+  version "1.1.6"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/react/-/react-1.1.6.tgz#8cd4f60b2ca08974322c1ce345c88fa874f9b953"
+  integrity sha512-kP5pimLyNWldw8+0j3ym+AACFEXcQHdELNtk45wDJA3HoH486x/zffdn7yLc3c1DOu5apew+COl8CNL4A+2E4g==
   dependencies:
-    "@ai-sdk/provider-utils" "1.0.19"
-    "@ai-sdk/ui-utils" "0.0.44"
+    "@ai-sdk/provider-utils" "2.1.5"
+    "@ai-sdk/ui-utils" "1.1.6"
+    swr "^2.2.5"
+    throttleit "2.1.0"
 
-"@ai-sdk/svelte@0.0.49":
-  version "0.0.49"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/svelte/-/svelte-0.0.49.tgz#8f7e86269ef231076107f22bd8b1f9133fa3aeb1"
-  integrity sha512-gV0MhaWxkatjf7uJrCAHO3bWrihokNUwGhuMCgyG+y53lwJKAYhR0zCoDRM2HnTJ89fdnx/PVe3R9fOWEVY5qA==
+"@ai-sdk/ui-utils@1.1.6":
+  version "1.1.6"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/ui-utils/-/ui-utils-1.1.6.tgz#285f59f6e9c6d3f10c0ab9c5a5860a1c03c9514c"
+  integrity sha512-YAwZhFwpIcvWERIjkET2o2MAwMFfJG18WdtcIjtxxMW7hA0bt5cliOV78DVcwRrxqJ2IKBlxaFmwUjW6M4SdOQ==
   dependencies:
-    "@ai-sdk/provider-utils" "1.0.19"
-    "@ai-sdk/ui-utils" "0.0.44"
-    sswr "2.1.0"
-
-"@ai-sdk/ui-utils@0.0.44":
-  version "0.0.44"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/ui-utils/-/ui-utils-0.0.44.tgz#04f46f5cdbd6b678e8b2b557df67c74f39ec630c"
-  integrity sha512-0qiyun/n5zqJzQs/WfQT86dZE5DiDhSHJc7b7ZGLYvNMztHkRQmak2zUCZP4IyGVZEicyEPQK6NEEpBgkmd3Dg==
-  dependencies:
-    "@ai-sdk/provider" "0.0.23"
-    "@ai-sdk/provider-utils" "1.0.19"
-    json-schema "0.4.0"
-    secure-json-parse "2.7.0"
-    zod-to-json-schema "3.23.2"
-
-"@ai-sdk/vue@0.0.50":
-  version "0.0.50"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/vue/-/vue-0.0.50.tgz#61f72e7b0d115641627a7dfeb6dbdfda73d98249"
-  integrity sha512-eIWfxqpKwRdL3rxJMg1HDJcjfugFJGg4P934Tl69S7UCot2/U4BPZoESVJQFroS1elbKHaMRgv0ZJt1ddWQPjQ==
-  dependencies:
-    "@ai-sdk/provider-utils" "1.0.19"
-    "@ai-sdk/ui-utils" "0.0.44"
-    swrv "1.0.4"
+    "@ai-sdk/provider" "1.0.6"
+    "@ai-sdk/provider-utils" "2.1.5"
+    zod-to-json-schema "^3.24.1"
 
 "@alloc/quick-lru@^5.2.0":
   version "5.2.0"
@@ -12729,25 +12719,17 @@ aggregate-error@^3.0.0, aggregate-error@^3.1.0:
     clean-stack "^2.0.0"
     indent-string "^4.0.0"
 
-ai@^3.3.41:
-  version "3.3.41"
-  resolved "https://registry.yarnpkg.com/ai/-/ai-3.3.41.tgz#e24ce2beaa1ff2414f1660896a51a1975830e706"
-  integrity sha512-unWUqw0hnZo0irhdedTv8ef7IEiySBCO3zjPxx1/k0kI1G0whKYq8l83k/LzqShLekc2Qg3gyyhdEO+39ptegw==
+ai@^4.1.11:
+  version "4.1.11"
+  resolved "https://registry.yarnpkg.com/ai/-/ai-4.1.11.tgz#0531f855c434b3352ce0c2008f2e669b0617b5bc"
+  integrity sha512-390dahvdwt/kKCq63dyi3M7pq6iWVk9MpfY9C5+RpyDWb50tohUwxntnUvB4Y/cOXGn4Miavdo1g8JbCxsd7wg==
   dependencies:
-    "@ai-sdk/provider" "0.0.23"
-    "@ai-sdk/provider-utils" "1.0.19"
-    "@ai-sdk/react" "0.0.59"
-    "@ai-sdk/solid" "0.0.47"
-    "@ai-sdk/svelte" "0.0.49"
-    "@ai-sdk/ui-utils" "0.0.44"
-    "@ai-sdk/vue" "0.0.50"
+    "@ai-sdk/provider" "1.0.6"
+    "@ai-sdk/provider-utils" "2.1.5"
+    "@ai-sdk/react" "1.1.6"
+    "@ai-sdk/ui-utils" "1.1.6"
     "@opentelemetry/api" "1.9.0"
-    eventsource-parser "1.1.2"
-    json-schema "0.4.0"
     jsondiffpatch "0.6.0"
-    nanoid "3.3.6"
-    secure-json-parse "2.7.0"
-    zod-to-json-schema "3.23.2"
 
 ajv@^6.12.3:
   version "6.12.6"
@@ -16490,6 +16472,11 @@ eventsource-parser@1.1.2, eventsource-parser@^1.0.0:
   resolved "https://registry.yarnpkg.com/eventsource-parser/-/eventsource-parser-1.1.2.tgz#ed6154a4e3dbe7cda9278e5e35d2ffc58b309f89"
   integrity sha512-v0eOBUbiaFojBu2s2NPBfYUoRR9GjcDNvCXVaqEf5vVfpIAh9f8RCo4vXTP8c63QRKCFwoLpMpTdPwwhEKVgzA==
 
+eventsource-parser@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/eventsource-parser/-/eventsource-parser-3.0.0.tgz#9303e303ef807d279ee210a17ce80f16300d9f57"
+  integrity sha512-T1C0XCUimhxVQzW4zFipdx0SficT651NnkR0ZSH3yQwh+mFMdLfgjABVi4YtMTtaL4s168593DaoaRLMqryavA==
+
 eventsource@2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/eventsource/-/eventsource-2.0.2.tgz#76dfcc02930fb2ff339520b6d290da573a9e8508"
@@ -20006,7 +19993,7 @@ json-schema-traverse@^1.0.0:
   resolved "https://registry.yarnpkg.com/json-schema-traverse/-/json-schema-traverse-1.0.0.tgz#ae7bcb3656ab77a73ba5c49bf654f38e6b6860e2"
   integrity sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==
 
-json-schema@0.4.0:
+json-schema@0.4.0, json-schema@^0.4.0:
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/json-schema/-/json-schema-0.4.0.tgz#f7de4cf6efab838ebaeb3236474cbba5a1930ab5"
   integrity sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==
@@ -22319,6 +22306,11 @@ nanoid@^3.1.12, nanoid@^3.1.30, nanoid@^3.3.3, nanoid@^3.3.6, nanoid@^3.3.7:
   version "3.3.7"
   resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.7.tgz#d0c301a691bc8d54efa0a2226ccf3fe2fd656bd8"
   integrity sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==
+
+nanoid@^3.3.8:
+  version "3.3.8"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.8.tgz#b1be3030bee36aaff18bacb375e5cce521684baf"
+  integrity sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==
 
 nanoid@^4.0.2:
   version "4.0.2"
@@ -25793,7 +25785,7 @@ section-matter@^1.0.0:
     extend-shallow "^2.0.1"
     kind-of "^6.0.0"
 
-secure-json-parse@2.7.0:
+secure-json-parse@2.7.0, secure-json-parse@^2.7.0:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/secure-json-parse/-/secure-json-parse-2.7.0.tgz#5a5f9cd6ae47df23dba3151edd06855d47e09862"
   integrity sha512-6aU+Rwsezw7VR8/nyvKTx8QpWH9FrcYiXXlqC4z5d5XQBDRqtbfsRjnwGyqbi3gddNtWHuEk9OANUotL26qKUw==
@@ -26330,13 +26322,6 @@ sshpk@^1.7.0:
     safer-buffer "^2.0.2"
     tweetnacl "~0.14.0"
 
-sswr@2.1.0:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/sswr/-/sswr-2.1.0.tgz#1eb64cd647cc9e11f871e7f43554abd8c64e1103"
-  integrity sha512-Cqc355SYlTAaUt8iDPaC/4DPPXK925PePLMxyBKuWd5kKc5mwsG3nT9+Mq2tyguL5s7b4Jg+IRMpTRsNTAfpSQ==
-  dependencies:
-    swrev "^4.0.0"
-
 stack-trace@0.0.9:
   version "0.0.9"
   resolved "https://registry.yarnpkg.com/stack-trace/-/stack-trace-0.0.9.tgz#a8f6eaeca90674c333e7c43953f275b451510695"
@@ -26871,23 +26856,13 @@ swap-case@^2.0.2:
   dependencies:
     tslib "^2.0.3"
 
-swr@2.2.5:
-  version "2.2.5"
-  resolved "https://registry.yarnpkg.com/swr/-/swr-2.2.5.tgz#063eea0e9939f947227d5ca760cc53696f46446b"
-  integrity sha512-QtxqyclFeAsxEUeZIYmsaQ0UjimSq1RZ9Un7I68/0ClKK/U3LoyQunwkQfJZr2fc22DfIXLNDc2wFyTEikCUpg==
+swr@^2.2.5:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/swr/-/swr-2.3.0.tgz#66fa45023efd4199f4e7ce608c255709a135943d"
+  integrity sha512-NyZ76wA4yElZWBHzSgEJc28a0u6QZvhb6w0azeL2k7+Q1gAzVK+IqQYXhVOC/mzi+HZIozrZvBVeSeOZNR2bqA==
   dependencies:
-    client-only "^0.0.1"
-    use-sync-external-store "^1.2.0"
-
-swrev@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/swrev/-/swrev-4.0.0.tgz#83da6983c7ef9d71ac984a9b169fc197cbf18ff8"
-  integrity sha512-LqVcOHSB4cPGgitD1riJ1Hh4vdmITOp+BkmfmXRh4hSF/t7EnS4iD+SOTmq7w5pPm/SiPeto4ADbKS6dHUDWFA==
-
-swrv@1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/swrv/-/swrv-1.0.4.tgz#278b4811ed4acbb1ae46654972a482fd1847e480"
-  integrity sha512-zjEkcP8Ywmj+xOJW3lIT65ciY/4AL4e/Or7Gj0MzU3zBJNMdJiT8geVZhINavnlHRMMCcJLHhraLTAiDOTmQ9g==
+    dequal "^2.0.3"
+    use-sync-external-store "^1.4.0"
 
 symbol-observable@^1.1.0:
   version "1.2.0"
@@ -27089,6 +27064,11 @@ thread-stream@^0.15.1:
   integrity sha512-UkEhKIg2pD+fjkHQKyJO3yoIvAP3N6RlNFt2dUhcS1FGvCD1cQa1M/PGknCLFIyZdtJOWQjejp7bdNqmN7zwdA==
   dependencies:
     real-require "^0.1.0"
+
+throttleit@2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/throttleit/-/throttleit-2.1.0.tgz#a7e4aa0bf4845a5bd10daa39ea0c783f631a07b4"
+  integrity sha512-nt6AMGKW1p/70DF/hGBdJB57B8Tspmbp5gfJ8ilhLnt7kkr2ye7hzD6NVG8GGErk2HWF34igrL2CXmNIkzKqKw==
 
 through2@^0.6.3:
   version "0.6.5"
@@ -28139,6 +28119,11 @@ use-sync-external-store@^1.0.0, use-sync-external-store@^1.2.0:
   resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.2.2.tgz#c3b6390f3a30eba13200d2302dcdf1e7b57b2ef9"
   integrity sha512-PElTlVMwpblvbNqQ82d2n6RjStvdSoNe9FG28kNfz3WiXilJm4DdNkEzRhCZuIDwY8U08WVihhGR5iRqAwfDiw==
 
+use-sync-external-store@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.4.0.tgz#adbc795d8eeb47029963016cefdf89dc799fcebc"
+  integrity sha512-9WXSPC5fMv61vaupRkCKCxsPxBocVnwakBEkMIHHpkTTg6icbJtg6jzgtLDm4bl3cSHAca52rYWih0k4K3PfHw==
+
 utf-8-validate@^5.0.2:
   version "5.0.10"
   resolved "https://registry.yarnpkg.com/utf-8-validate/-/utf-8-validate-5.0.10.tgz#d7d10ea39318171ca982718b6b96a8d2442571a2"
@@ -28995,15 +28980,15 @@ zip-stream@^6.0.1:
     compress-commons "^6.0.2"
     readable-stream "^4.0.0"
 
-zod-to-json-schema@3.23.2:
-  version "3.23.2"
-  resolved "https://registry.yarnpkg.com/zod-to-json-schema/-/zod-to-json-schema-3.23.2.tgz#bc7e379c8050462538383e382964c03d8fe008f9"
-  integrity sha512-uSt90Gzc/tUfyNqxnjlfBs8W6WSGpNBv0rVsNxP/BVSMHMKGdthPYff4xtCHYloJGM0CFxFsb3NbC0eqPhfImw==
-
 zod-to-json-schema@^3.22.3, zod-to-json-schema@^3.22.4, zod-to-json-schema@^3.22.5, zod-to-json-schema@^3.23.0:
   version "3.23.3"
   resolved "https://registry.yarnpkg.com/zod-to-json-schema/-/zod-to-json-schema-3.23.3.tgz#56cf4e0bd5c4096ab46e63159e20998ec7b19c39"
   integrity sha512-TYWChTxKQbRJp5ST22o/Irt9KC5nj7CdBKYB/AosCRdj/wxEMvv4NNaj9XVUHDOIp53ZxArGhnw5HMZziPFjog==
+
+zod-to-json-schema@^3.24.1:
+  version "3.24.1"
+  resolved "https://registry.yarnpkg.com/zod-to-json-schema/-/zod-to-json-schema-3.24.1.tgz#f08c6725091aadabffa820ba8d50c7ab527f227a"
+  integrity sha512-3h08nf3Vw3Wl3PK+q3ow/lIil81IT2Oa7YpQyUUDsEWbXveMesdfK1xBd2RhCkynwZndAxixji/7SYJJowr62w==
 
 zod@3.23.8, zod@^3.21.4, zod@^3.22.3, zod@^3.22.4, zod@^3.23.8:
   version "3.23.8"
