@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{clock::Clock, program::invoke, system_instruction};
 
-declare_id!("BUHpXM8QXNixSt4snCxLUKC7DnGdar3Vrch4EDs7Acz5");
+declare_id!("AwPNA8uVGpLkksaomZ6Y8uomcjyNAA4JhDm41oSH7nmi");
 
 const CONFIG_PDA_SEED: &[u8] = b"config";
 
