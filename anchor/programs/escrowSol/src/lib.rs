@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{clock::Clock, program::invoke, system_instruction};
 
-declare_id!("7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5");
+declare_id!("BUHpXM8QXNixSt4snCxLUKC7DnGdar3Vrch4EDs7Acz5");
 
 const CONFIG_PDA_SEED: &[u8] = b"config";
 
@@ -196,6 +196,28 @@ pub mod escrow_sol {
 
         Ok(())
     }
+
+    pub fn set_storage_url(ctx: Context<SetStorageUrl>, url: Option<String>) -> Result<()> {
+        let escrow: &mut Account<EscrowAccount> = &mut ctx.accounts.escrow;
+
+        if url.is_none() {
+            escrow.storage_url = None;
+            return Ok(());
+        }
+
+        let url_string = url.clone().unwrap();
+        let storage_url_as_bytes: &[u8] = url_string.as_bytes();
+        require!(
+            storage_url_as_bytes.len() <= URL_LENGTH,
+            ErrorCode::InvalidUrl
+        );
+
+        let mut storage_url_fixed_size_array = [0u8; URL_LENGTH];
+        storage_url_fixed_size_array[..storage_url_as_bytes.len()].copy_from_slice(storage_url_as_bytes);
+
+        escrow.storage_url = Some(storage_url_fixed_size_array);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -289,6 +311,18 @@ pub struct ReleaseHold<'info> {
     pub escrow: Account<'info, EscrowAccount>,
     pub config: Account<'info, ConfigAccount>,
     pub system_program: Program<'info, System>,
+} 
+
+#[derive(Accounts)]
+#[instruction(url: Option<String>)]
+pub struct SetStorageUrl<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+    #[account(mut)]
+    pub escrow: Account<'info, EscrowAccount>,
+    #[account(mut, constraint = signer.key() == config.authority @ ErrorCode::InvalidAuthority)]
+    pub config: Account<'info, ConfigAccount>,
+    pub system_program: Program<'info, System>,
 }
 
 const DISCRIMINATOR_LENGTH: usize = 8;
@@ -296,6 +330,8 @@ const PUBLIC_KEY_LENGTH: usize = 32;
 const U64_LENGTH: usize = 8;
 const U8_LENGTH: usize = 1;
 const I64_LENGTH: usize = 8;
+const URL_LENGTH: usize = 200;
+const OPTION_DISCRIMINATOR_LENGTH: usize = 1;
 
 #[account]
 pub struct ConfigAccount {
@@ -319,14 +355,17 @@ pub struct EscrowAccount {
     pub bump: u8,
     pub amount_lamports: u64,
     pub hold_counter: u64,
+    pub storage_url: Option<[u8; URL_LENGTH]>,
 }
 
 impl EscrowAccount {
     const LEN: usize = DISCRIMINATOR_LENGTH
-     + PUBLIC_KEY_LENGTH // Authority
-     + U8_LENGTH // Bump
-     + U64_LENGTH // Amount lamports
-     + U64_LENGTH; // Hold counter
+        + PUBLIC_KEY_LENGTH // Authority
+        + U8_LENGTH // Bump
+        + U64_LENGTH // Amount lamports
+        + U64_LENGTH // Hold counter
+        + OPTION_DISCRIMINATOR_LENGTH // Option discriminator
+        + URL_LENGTH; // Fixed size byte array for URL
 }
 
 #[account]
@@ -355,4 +394,6 @@ pub enum ErrorCode {
     NotEnoughLamportsOnHold,
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
+    #[msg("Invalid URL")]
+    InvalidUrl,
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { ChatRequestOptions } from '@ai-sdk/ui-utils';
+import { ChatRequestOptions, generateId } from '@ai-sdk/ui-utils';
 import {
   AdjustmentsVerticalIcon,
   InformationCircleIcon,
@@ -55,13 +55,20 @@ import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { SiSolana } from 'react-icons/si';
 import { toast } from 'react-toastify';
-import { MAX_RESPONSE_TOKENS } from 'constants/app';
+import {
+  MAX_RESPONSE_TOKENS,
+  ONIX_CHAT_FILE_EXTENSION,
+  SIGNATURE_MESSAGE_FOR_KEY,
+} from 'constants/app';
 import { FAQS, HistoryMode, ROADMAP_ITEMS, historySelectionLabels } from 'constants/chat';
 import { DEFAULT_MODELS, FINE_TUNE_MODELS, HistoryTabs, PRESETS, Preset } from 'constants/chat';
 import { Product } from 'types/generated/sanity';
 import { deposit, getConfigAccount, getEscrowAccount } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
+import { deriveCryptoKeyFromMessage } from 'utils/client/deriveCryptoKeyFromMessage';
 import { KeyCodes } from 'utils/client/dom';
+import { decryptMessageLog, encryptMessageLog } from 'utils/client/encryptMessageLog';
+import { stringToFile } from 'utils/shared/stringToFile';
 import { useBrowserStorage } from 'context/storage/BrowserStorageContext';
 import { useAnchorProvider } from 'hooks/useAnchorProvider';
 import Github from 'svg/Github';
@@ -268,10 +275,13 @@ export default function ChatLlmScreen({ product }: Props) {
     historyMode,
     togglePinChat,
     toggleIsSavingChat,
+    toggleObfuscateTitle,
     setTags,
     setProject,
     setTitle,
     deleteItemById,
+    addItem,
+    dispatch,
   } = useBrowserStorage();
   const activeChatProject = activeChat?.projectId
     ? state.projects.find((project) => project.id === activeChat?.projectId)
@@ -476,6 +486,55 @@ export default function ChatLlmScreen({ product }: Props) {
       router.push('/signin');
       return;
     }
+  };
+
+  const encryptChat = async (filename?: string) => {
+    const signedMessage = await signMessage(new TextEncoder().encode(SIGNATURE_MESSAGE_FOR_KEY));
+    const key = await deriveCryptoKeyFromMessage(signedMessage);
+    const encryptedMessageLog = await encryptMessageLog({
+      key,
+      messages: messages,
+      title: activeChat?.title,
+    });
+    const file = await stringToFile(encryptedMessageLog, `${filename}${ONIX_CHAT_FILE_EXTENSION}`);
+
+    return file;
+  };
+
+  const handleExportChat = async () => {
+    if (!connected || !signMessage) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      const file = await encryptChat();
+
+      const filename = activeChat?.obfuscateTitle ? generateId() : activeChat?.title;
+
+      const url = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}${ONIX_CHAT_FILE_EXTENSION}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error signing message:', error);
+      toast.error('Failed to sign message');
+    }
+  };
+
+  const handleSaveChatToCloud = async () => {
+    if (!connected || !signMessage) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    const filename = generateId();
+    const file = await encryptChat(filename);
+    const fileSize = file.size;
   };
 
   const controlsContent = (
@@ -710,6 +769,97 @@ export default function ChatLlmScreen({ product }: Props) {
           </div>
         </nav>
         <div className="space-y-4 py-4">
+          <div className="px-4">
+            <Button
+              fullWidth
+              color="primary"
+              className="font-semibold text-black"
+              onPress={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = ONIX_CHAT_FILE_EXTENSION;
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (!file) return;
+
+                  if (!connected || !signMessage) {
+                    toast.error('Please connect your wallet first');
+                    return;
+                  }
+
+                  try {
+                    const signedMessage = await signMessage(
+                      new TextEncoder().encode(SIGNATURE_MESSAGE_FOR_KEY),
+                    );
+                    const key = await deriveCryptoKeyFromMessage(signedMessage);
+                    const fileContent = await file.text();
+                    const { messages, title } = await decryptMessageLog({
+                      key,
+                      encryptedData: fileContent,
+                    });
+
+                    const chatId = generateId();
+                    const now = new Date().toISOString();
+                    const newChat = {
+                      id: chatId,
+                      messages,
+                      title: title || file.name.replace(ONIX_CHAT_FILE_EXTENSION, ''),
+                      createdAt: now,
+                      updatedAt: now,
+                      isSavingChat: true,
+                      model: 'llama',
+                      modelInfo: { id: 'llama', title: 'Llama' },
+                      preview: messages[0]?.content || '',
+                      linkedPlugins: [],
+                      chatParams: {
+                        temperature: null,
+                        presencePenalty: null,
+                        frequencyPenalty: null,
+                        topP: null,
+                        topK: null,
+                        maxTokens: null,
+                        safetySettings: null,
+                        contextLimit: 0,
+                        streaming: true,
+                        outputTone: '',
+                        outputLanguage: '',
+                        outputStyle: '',
+                        outputFormat: '',
+                        isShowOutputSettings: false,
+                        systemMessage: '',
+                      },
+                      tokenUsage: {
+                        totalCostUsd: 0,
+                        totalTokens: 0,
+                        enhancedTokens: 0,
+                        enhancedCostUsd: 0,
+                        messageTokens: 0,
+                        messageCostUsd: 0,
+                        recordedAt: now,
+                      },
+                      data: {},
+                      character: null,
+                      syncedAt: now,
+                      tags: [],
+                    };
+
+                    await addItem('chats', newChat);
+                    dispatch({ type: 'ADD_ITEM', storeName: 'chats', item: newChat });
+                    setActiveChatId(chatId);
+                    setMessages(messages);
+                    setIsNewChat(false);
+                    toast.success('Chat imported successfully');
+                  } catch (error) {
+                    console.error('Error importing chat:', error);
+                    toast.error('Failed to import chat');
+                  }
+                };
+                input.click();
+              }}
+            >
+              Upload Chat
+            </Button>
+          </div>
           <ConnectWallet />
           {session.status === 'loading' ? null : session.status === 'unauthenticated' &&
             !connected ? (
@@ -1313,6 +1463,14 @@ export default function ChatLlmScreen({ product }: Props) {
                   </Tooltip>
                 </div>
               </div>
+              <div className="mx-auto flex w-fit gap-2">
+                <Button size="sm" variant="flat" onClick={handleExportChat}>
+                  Export Chat
+                </Button>
+                <Button size="sm" variant="flat" onClick={handleSaveChatToCloud}>
+                  Save to Cloud
+                </Button>
+              </div>
               <div className="flex gap-2.5">
                 {!!activeChat?.pinnedAt && (
                   <button onClick={() => togglePinChat(false)}>
@@ -1607,6 +1765,7 @@ export default function ChatLlmScreen({ product }: Props) {
         </ModalContent>
       </Modal>
       <Modal
+        size="2xl"
         isOpen={isOpenFilters}
         onOpenChange={() => {
           onOpenChangeFilters();
@@ -1762,14 +1921,7 @@ export default function ChatLlmScreen({ product }: Props) {
           )}
         </ModalContent>
       </Modal>
-      <Modal
-        size="2xl"
-        isOpen={isOpenSettings}
-        backdrop="blur"
-        onOpenChange={() => {
-          onOpenChangeSettings();
-        }}
-      >
+      <Modal size="2xl" isOpen={isOpenSettings} backdrop="blur" onOpenChange={onOpenChangeSettings}>
         <ModalContent>
           {(onClose) => (
             <>
@@ -1847,6 +1999,29 @@ export default function ChatLlmScreen({ product }: Props) {
                               +
                             </Button>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border-primary-darkmode p-4">
+                      <h3 className="mb-2 text-sm font-medium">Privacy Settings</h3>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            size="sm"
+                            isSelected={activeChat?.obfuscateTitle}
+                            onValueChange={toggleObfuscateTitle}
+                          />
+                          <span className="text-sm">Obfuscate chat title when exporting</span>
+                          <Tooltip
+                            placement="bottom"
+                            content="When enabled, exported chat files will use a random ID instead of the chat title"
+                            size="sm"
+                            closeDelay={100}
+                            className="max-w-64 text-pretty p-4"
+                            shadow="lg"
+                          >
+                            <InformationCircleIcon className="ml-1 w-4 cursor-pointer text-text-secondary-darkmode" />
+                          </Tooltip>
                         </div>
                       </div>
                     </div>

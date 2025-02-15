@@ -1,5 +1,4 @@
 import * as anchor from '@coral-xyz/anchor';
-import { BN } from '@coral-xyz/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { CONFIG_PDA_SEED, ESCROW_SOL_PROGRAM_ID } from 'constants/solana';
 import { EscrowSol } from 'types/generated/solana/escrowSol';
@@ -95,9 +94,14 @@ export const getHoldAccount = async (
   }
 };
 
+export const decodeStorageUrl = (storageUrl: number[]) => {
+  return new TextDecoder().decode(new Uint8Array(storageUrl)).replace(/\0/g, '');
+};
+
 export { deposit } from './deposit';
 export { initialize } from './initialize';
 export { adjustRate } from './adjustRate';
 export { debit } from './debit';
 export { releaseHold } from './releaseHold';
 export { hold } from './hold';
+export { setStorageUrl } from './setStorageUrl';

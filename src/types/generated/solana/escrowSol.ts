@@ -268,6 +268,46 @@ export type EscrowSol = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "setStorageUrl",
+      "discriminator": [
+        35,
+        112,
+        246,
+        135,
+        217,
+        196,
+        125,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "escrow",
+          "writable": true
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "url",
+          "type": {
+            "option": "string"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -331,6 +371,11 @@ export type EscrowSol = {
       "code": 6003,
       "name": "arithmeticOverflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6004,
+      "name": "invalidUrl",
+      "msg": "Invalid URL"
     }
   ],
   "types": [
@@ -378,6 +423,17 @@ export type EscrowSol = {
           {
             "name": "holdCounter",
             "type": "u64"
+          },
+          {
+            "name": "storageUrl",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  200
+                ]
+              }
+            }
           }
         ]
       }

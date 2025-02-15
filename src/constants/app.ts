@@ -136,3 +136,9 @@ const NERDY_PHRASES = [
 ];
 
 export const MAX_RESPONSE_TOKENS = 5000;
+
+export const SIGNATURE_MESSAGE_FOR_KEY =
+  'Please sign this message to generate a private key for Onix.chat. DO NOT SIGN THIS MESSAGE OUTSIDE OF THE ONIX.CHAT WEBSITE.';
+
+export const ONIX_CHAT_FILE_EXTENSION = '.onix';
+export const ONIX_INDEX_FILE_EXTENSION = '.ondx';
