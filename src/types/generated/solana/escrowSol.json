@@ -262,6 +262,46 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "set_storage_url",
+      "discriminator": [
+        35,
+        112,
+        246,
+        135,
+        217,
+        196,
+        125,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "escrow",
+          "writable": true
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "url",
+          "type": {
+            "option": "string"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -325,6 +365,11 @@
       "code": 6003,
       "name": "ArithmeticOverflow",
       "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidUrl",
+      "msg": "Invalid URL"
     }
   ],
   "types": [
@@ -372,6 +417,17 @@
           {
             "name": "hold_counter",
             "type": "u64"
+          },
+          {
+            "name": "storage_url",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  200
+                ]
+              }
+            }
           }
         ]
       }

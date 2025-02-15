@@ -113,6 +113,7 @@ export type Chat = {
   tags?: Tag[];
   projectId?: string;
   isSavingChat: boolean;
+  obfuscateTitle?: boolean;
   data: object;
 };
 

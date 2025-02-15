@@ -5,13 +5,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
+escrow_sol = "BUHpXM8QXNixSt4snCxLUKC7DnGdar3Vrch4EDs7Acz5"
 
 [programs.devnet]
-escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
+escrow_sol = "BUHpXM8QXNixSt4snCxLUKC7DnGdar3Vrch4EDs7Acz5"
 
 [programs.mainnet]
-escrow_sol = "7L4VThFEZYgudKNFfBxbBSimMgkWu4PjpcfcPN8sSaW5"
+escrow_sol = "BUHpXM8QXNixSt4snCxLUKC7DnGdar3Vrch4EDs7Acz5"
 
 [registry]
 url = "https://api.apr.dev"

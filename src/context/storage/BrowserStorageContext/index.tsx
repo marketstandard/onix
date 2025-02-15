@@ -28,6 +28,7 @@ type State = DatabaseState & LocalState;
 type Action<Key extends StoreNames> =
   | { type: 'ADD_ITEM'; storeName: Key; item: ChatDatabaseSchema[Key]['value'] }
   | { type: 'TOGGLE_IS_SAVE_CHAT'; storeName: Key; item: ChatDatabaseSchema[Key]['value'] }
+  | { type: 'TOGGLE_OBFUSCATE_TITLE'; storeName: Key; item: ChatDatabaseSchema[Key]['value'] }
   | { type: 'DELETE_ITEM'; storeName: Key; id: string }
   | { type: 'SET_ITEMS'; storeName: Key; items: ChatDatabaseSchema[Key]['value'][] }
   | { type: 'SET_ACTIVE_CHAT'; id: string }
@@ -64,6 +65,14 @@ const databaseReducer = <Key extends StoreNames>(state: State, action: Action<Ke
         historyMode: action.mode,
       };
     case 'TOGGLE_IS_SAVE_CHAT': {
+      const matchingItem = state[action.storeName].find((item) => item.id === action.item.id);
+      const updatedItems = state[action.storeName].filter((item) => item.id !== action.item.id);
+      return {
+        ...state,
+        [action.storeName]: [{ ...(matchingItem || {}), ...action.item }, ...updatedItems],
+      };
+    }
+    case 'TOGGLE_OBFUSCATE_TITLE': {
       const matchingItem = state[action.storeName].find((item) => item.id === action.item.id);
       const updatedItems = state[action.storeName].filter((item) => item.id !== action.item.id);
       return {
@@ -113,6 +122,7 @@ interface BrowserStorageContextType {
   startNewChat: () => void;
   togglePinChat: (isPinned: boolean) => void;
   toggleIsSavingChat: () => void;
+  toggleObfuscateTitle: () => void;
   setTags: (params: { chatId: string; tags: ChatDatabaseSchema['tags']['value'][] }) => void;
   setProject: ({
     chatId,
@@ -159,7 +169,8 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   ) => {
     const findExistingItem = state[storeName].find((i) => i.id === item.id);
     const newItem = {
-      isSavingChat: state.historyMode !== HistoryMode.Off, // Use default, otherwise it will be overwritten by the previous chat or item
+      isSavingChat: state.historyMode !== HistoryMode.Off,
+      obfuscateTitle: true, // Default to true for privacy
       ...(findExistingItem || {}),
       ...item,
     };
@@ -219,6 +230,19 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
         isSavingChat: !activeChat?.isSavingChat,
       };
       itemUpdateIsSaveChat('chats', updatedChat);
+    }
+  };
+
+  const toggleObfuscateTitle = async () => {
+    const id = state.activeChatId;
+    if (activeChat) {
+      const updatedChat = {
+        id,
+        ...activeChat,
+        obfuscateTitle: !activeChat?.obfuscateTitle,
+      };
+      dispatch({ type: 'TOGGLE_OBFUSCATE_TITLE', storeName: 'chats', item: updatedChat });
+      await addItem('chats', updatedChat);
     }
   };
 
@@ -381,6 +405,7 @@ export const IndexDatabaseProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     togglePinChat,
     toggleIsSavingChat,
+    toggleObfuscateTitle,
     setTags,
     setProject,
     setTitle,

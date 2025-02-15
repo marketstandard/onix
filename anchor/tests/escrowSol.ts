@@ -470,4 +470,63 @@ describe('Escrow Sol', () => {
     const holdAccountInfo = await program.provider.connection.getAccountInfo(holdPda);
     assert(holdAccountInfo === null, 'Hold account should be closed after release');
   });
+
+  it('Can set storage url', async () => {
+    const [escrowPda] = deriveEscrowPda(userWallet.publicKey);
+    const url = 'https://store.onix.chat/test';
+
+    await program.methods.setStorageUrl(url)
+      .accountsStrict({
+        signer: authorityWallet.publicKey,
+        escrow: escrowPda,
+        config: configPda,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .signers([authorityWallet])
+      .rpc({ commitment: 'confirmed' });
+
+    const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+
+    const storageUrl = new TextDecoder().decode(new Uint8Array(escrowAccount.storageUrl)).replace(/\0/g, '');
+
+    assert(storageUrl === url, 'Incorrect storage url');
+  });
+
+  it('Can set storage url to null', async () => {
+    const [escrowPda] = deriveEscrowPda(userWallet.publicKey    );
+    const url = null;
+
+    await program.methods.setStorageUrl(url)
+      .accountsStrict({
+        signer: authorityWallet.publicKey,
+        escrow: escrowPda,
+        config: configPda,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .signers([authorityWallet])
+      .rpc({ commitment: 'confirmed' });
+
+    const escrowAccount = await program.account.escrowAccount.fetch(escrowPda);
+    assert(escrowAccount.storageUrl === null, 'Incorrect storage url');
+  });
+
+  it('Cannot set storage url if not authority', async () => {
+    const [escrowPda] = deriveEscrowPda(userWallet.publicKey);
+    const url = 'https://store.onix.chat/test2';
+
+    try {
+      await program.methods.setStorageUrl(url)
+        .accountsStrict({
+          signer: thirdPartyWallet.publicKey,
+          escrow: escrowPda,
+          config: configPda,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .signers([thirdPartyWallet])
+        .rpc({ commitment: 'confirmed' });
+      assert(false, 'Third party should not be able to set storage url');
+    } catch (error) {
+      assert(error.toString().includes('InvalidAuthority'));
+    }
+  });
 });
