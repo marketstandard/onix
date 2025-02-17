@@ -1467,9 +1467,12 @@ export default function ChatLlmScreen({ product }: Props) {
                 <Button size="sm" variant="flat" onClick={handleExportChat}>
                   Export Chat
                 </Button>
-                <Button size="sm" variant="flat" onClick={handleSaveChatToCloud}>
+                <Button size="sm" variant="flat" isDisabled>
                   Save to Cloud
                 </Button>
+                <Tooltip content="Cloud storage coming soon!" placement="bottom">
+                  <InformationCircleIcon className="ml-1 w-4 cursor-pointer text-text-secondary-darkmode" />
+                </Tooltip>
               </div>
               <div className="flex gap-2.5">
                 {!!activeChat?.pinnedAt && (
