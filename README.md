@@ -87,13 +87,3 @@ We are building the future of private AI with features that put you in charge of
 ---
 
 **Privacy First. Always.**
-
-const FAQS = [
-// ... existing FAQs ...
-{
-title: 'How do payments work?',
-content:
-'We use Solana for all payments. When you chat, funds are placed on a 10-minute hold in your escrow account. If the API call succeeds, the server withdraws the held amount. If the call fails or times out, the hold expires automatically and the funds return to your available balance. This ensures you only pay for successful requests while protecting both users and the service.',
-},
-// ... existing FAQs ...
-];
