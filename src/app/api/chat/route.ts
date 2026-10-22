@@ -6,6 +6,7 @@ import { auth } from 'auth';
 import { Session } from 'next-auth';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
 import { getModel } from 'services/server/ai';
+import { groqRequestErrorMessage } from 'services/server/ai/groq';
 import { getStaticAnchorProvider } from 'services/shared/solana';
 import { debit, hold } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
@@ -75,6 +76,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
 
   // Use createDataStreamResponse to handle both the chat response and title generation
   return createDataStreamResponse({
+    onError: (error) => groqRequestErrorMessage(error) ?? 'An error occurred.',
     execute: async (dataStream) => {
       // Start the main chat response
       const result = streamText({
