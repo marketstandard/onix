@@ -1,5 +1,11 @@
 // import { createMistral } from '@ai-sdk/mistral';
 import { createOpenAI } from '@ai-sdk/openai';
+import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
+import {
+  createGroqFetch,
+  createGroqUnavailableMiddleware,
+  resolveGroqModelId,
+} from 'services/server/ai/groq';
 
 // import { ChatOllama } from '@langchain/community/chat_models/ollama';
 // import { OllamaFunctions } from '@langchain/community/experimental/chat_models/ollama_functions';
@@ -25,10 +31,6 @@ import { createOpenAI } from '@ai-sdk/openai';
 
 // export const langchainModel = ollama('langchain');
 
-const LLAMA_SMART = 'llama-3.1-405b-reasoning';
-const LLAMA_VERSATILE = 'llama-3.3-70b-versatile';
-const LLAMA_INSTANT = 'llama-3.1-8b-instant';
-
 // export const getLocalModel = (model?: string) => {
 //   if (model === 'ollama') {
 //     return getOllamaModal();
@@ -50,20 +52,25 @@ const LLAMA_INSTANT = 'llama-3.1-8b-instant';
 //   }
 // };
 
-export const getServerModel = ({ model }: { model?: string }) => {
+export const getServerModel = ({ model }: { model?: string } = {}) => {
+  const modelId = resolveGroqModelId(model);
   const groq = createOpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
     apiKey: process.env.GROQ_API_KEY,
+    fetch: createGroqFetch(),
   });
-  /**
-   * @todo Drive this model selection (and overall in case we migrate from groq) using the env
-   */
-  return groq(LLAMA_VERSATILE);
+  // gpt-oss keeps the answer in `content` when include_reasoning is false.
+  // Models that still emit <think> tags are stripped before the chat UI sees them.
+  const languageModel = wrapLanguageModel({
+    model: groq(modelId),
+    middleware: extractReasoningMiddleware({ tagName: 'think' }),
+  });
+  return wrapLanguageModel({
+    model: languageModel,
+    middleware: createGroqUnavailableMiddleware(modelId),
+  });
 };
 
-/**
- * @todo Drive through .env?
- */
 export const getModel = ({ model }: { model?: string } = {}) => {
   if (process.env.NODE_ENV === 'production') {
     return getServerModel({ model });

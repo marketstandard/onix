@@ -3,6 +3,11 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 import { createTransport } from '@sentry/core';
 import * as Sentry from '@sentry/nextjs';
+import {
+  CLIENT_EXTENSION_DENY_URLS,
+  CLIENT_NOISE_IGNORE_ERRORS,
+  clientBeforeSend,
+} from './src/services/client/sentryNoise';
 
 const SENTRY_DSN = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -46,7 +51,11 @@ Sentry.init({
     'EBCallBackMessageReceived',
     // See http://toolbar.conduit.com/Developer/HtmlAndGadget/Methods/JSInjection.aspx
     'conduitPage',
+
+    // Stripe.js blocked by the client, extension M_ID, requestIdleCallback noise.
+    ...CLIENT_NOISE_IGNORE_ERRORS,
   ],
+  beforeSend: clientBeforeSend,
   // @ts-ignore, available in web
   denyUrls: [
     // Facebook flakiness
@@ -59,6 +68,7 @@ Sentry.init({
     // Chrome extensions
     /extensions\//i,
     /^chrome:\/\//i,
+    ...CLIENT_EXTENSION_DENY_URLS,
     // Other plugins
     /127\.0\.0\.1:4001\/isrunning/i, // Cacaoweb
     /webappstoolbarba\.texthelp\.com\//i,
