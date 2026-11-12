@@ -9,6 +9,7 @@ import { getModel } from 'services/server/ai';
 import { getStaticAnchorProvider } from 'services/shared/solana';
 import { debit, hold } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
+import { sanitizeGeneratedTitle } from 'utils/ai/generateChatTitle';
 
 ed25519.etc.sha512Sync = (...m) => sha512(ed25519.etc.concatBytes(...m));
 
@@ -97,17 +98,24 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
           }
 
           if (isFirstMessage) {
-            const titleResult = await generateText({
-              model: getModel(),
-              system: `You are a helpful assistant with a single purpose. You are to create simple, human-readables titles for conversations. The title should be short, accurate, and use plain language. The focus shoulld be on the users question, with some slight modification based on the response. You should use at most 6 words. Respond only with the title in plain text (NO MARKDOWN EVER) and nothing else. Don't use quotation marks or put the word "title" in the response. ALWAYS respond with some title and never an empty string. IN THE THREAD ARE THE MESSAGES OF THE CONVERATION THAT SHOULD GIVE A TITLE TO.`,
-              messages: [{ role: 'user', content: `Thread: ${JSON.stringify(messages, null, 2)}` }],
-              maxTokens: 100,
-            });
+            let generatedTitle: string | undefined;
+            try {
+              const titleResult = await generateText({
+                model: getModel(),
+                system: `You are a helpful assistant with a single purpose. You are to create simple, human-readables titles for conversations. The title should be short, accurate, and use plain language. The focus shoulld be on the users question, with some slight modification based on the response. You should use at most 6 words. Respond only with the title in plain text (NO MARKDOWN EVER) and nothing else. Don't use quotation marks or put the word "title" in the response. ALWAYS respond with some title and never an empty string. IN THE THREAD ARE THE MESSAGES OF THE CONVERATION THAT SHOULD GIVE A TITLE TO.`,
+                messages: [{ role: 'user', content: `Thread: ${JSON.stringify(messages, null, 2)}` }],
+                maxTokens: 100,
+              });
+              generatedTitle = titleResult?.text;
+            } catch {
+              // Title generation failed, will use fallback
+            }
 
-            // Stream the title as additional data
+            const title = sanitizeGeneratedTitle(generatedTitle, messages);
+
             dataStream.writeData({
               type: 'title',
-              title: titleResult.text,
+              title,
             });
           }
         },
