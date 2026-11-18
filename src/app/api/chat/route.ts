@@ -5,7 +5,7 @@ import { createDataStreamResponse, generateText, streamText } from 'ai';
 import { auth } from 'auth';
 import { Session } from 'next-auth';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
-import { getModel } from 'services/server/ai';
+import { getModel, getFallbackModel, isModelNotFoundError } from 'services/server/ai';
 import { getStaticAnchorProvider } from 'services/shared/solana';
 import { debit, hold } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
@@ -19,6 +19,22 @@ const IS_FREE_BETA_USAGE = true;
 const IS_RATE_LIMIT = false;
 
 const SYSTEM_MESSAGE = `You are a generally helpful assistant. You may be given tools that you can call for functions and specific results, but if a tool doesn't match the prompt, you should not use them. DO NOT DISCUSS THE TOOLS IN ANY WAY - THEY SHOULD ONLY BE USED IN THE BACKGROUND AND NOT TO BOTHER THE CHAT EXPERIENCE. If you do use a tool, always respond with some text as well to preface it or present the result.`;
+
+async function generateTextWithFallback(
+  options: Parameters<typeof generateText>[0],
+): ReturnType<typeof generateText> {
+  try {
+    return await generateText(options);
+  } catch (error) {
+    if (isModelNotFoundError(error)) {
+      return generateText({
+        ...options,
+        model: getFallbackModel(),
+      });
+    }
+    throw error;
+  }
+}
 
 export const POST = auth(async (req: Request & { auth: Session }, res) => {
   const session: Session = req?.auth;
@@ -100,7 +116,7 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
           if (isFirstMessage) {
             let generatedTitle: string | undefined;
             try {
-              const titleResult = await generateText({
+              const titleResult = await generateTextWithFallback({
                 model: getModel(),
                 system: `You are a helpful assistant with a single purpose. You are to create simple, human-readables titles for conversations. The title should be short, accurate, and use plain language. The focus shoulld be on the users question, with some slight modification based on the response. You should use at most 6 words. Respond only with the title in plain text (NO MARKDOWN EVER) and nothing else. Don't use quotation marks or put the word "title" in the response. ALWAYS respond with some title and never an empty string. IN THE THREAD ARE THE MESSAGES OF THE CONVERATION THAT SHOULD GIVE A TITLE TO.`,
                 messages: [{ role: 'user', content: `Thread: ${JSON.stringify(messages, null, 2)}` }],
