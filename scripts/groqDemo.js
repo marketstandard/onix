@@ -5,7 +5,7 @@ const groq = new Groq();
 async function main() {
   const chatCompletion = await groq.chat.completions.create({
     messages: [{ role: 'user', content: 'Explain the importance of low latency LLMs' }],
-    model: 'llama-3.1-8b-instant',
+    model: 'openai/gpt-oss-20b',
     temperature: 1,
     max_tokens: 1024,
     top_p: 1,

@@ -1,74 +1,51 @@
-// import { createMistral } from '@ai-sdk/mistral';
 import { createOpenAI } from '@ai-sdk/openai';
 
-// import { ChatOllama } from '@langchain/community/chat_models/ollama';
-// import { OllamaFunctions } from '@langchain/community/experimental/chat_models/ollama_functions';
-// import { Ollama } from '@langchain/community/llms/ollama';
-// import { BaseMessage, HumanMessage, MessageType, SystemMessage } from '@langchain/core/messages';
-// import { ChatPromptTemplate } from '@langchain/core/prompts';
-// import { ChatOpenAI } from '@langchain/openai';
-// import { LangChainAdapter } from 'ai';
-// import { createOllama } from 'ollama-ai-provider';
+const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-120b';
+const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
 
-/**
- * @todo checks for environment, may do different between local and server
- */
-
-// const getOllamaModal = (model?: string) => {
-//   const OLLAMA_MODEL = 'llama3.1';
-//   // VERCEL BINDINGS
-//   const ollama = createOllama({
-//     // custom settings
-//   });
-//   return ollama(OLLAMA_MODEL);
-// };
-
-// export const langchainModel = ollama('langchain');
-
-const LLAMA_SMART = 'llama-3.1-405b-reasoning';
-const LLAMA_VERSATILE = 'llama-3.3-70b-versatile';
-const LLAMA_INSTANT = 'llama-3.1-8b-instant';
-
-// export const getLocalModel = (model?: string) => {
-//   if (model === 'ollama') {
-//     return getOllamaModal();
-//   } else if (model === 'mistral') {
-//     const ollama = createOllama({
-//       // custom settings
-//     });
-//     const mistalModel = ollama('mistral');
-//     // const mistral = createMistral({
-//     //   // custom settings
-//     //   baseURL: 'http://localhost:11434/api',
-//     //   apiKey: 'local',
-//     // });
-//     // const model = mistral('mistral-large-latest');
-
-//     return mistalModel;
-//   } else {
-//     return getOllamaModal();
-//   }
-// };
-
-export const getServerModel = ({ model }: { model?: string }) => {
-  const groq = createOpenAI({
+function createGroqClient() {
+  return createOpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
     apiKey: process.env.GROQ_API_KEY,
   });
-  /**
-   * @todo Drive this model selection (and overall in case we migrate from groq) using the env
-   */
-  return groq(LLAMA_VERSATILE);
+}
+
+export const getServerModel = ({ model }: { model?: string }) => {
+  const groq = createGroqClient();
+  return groq(GROQ_PRIMARY_MODEL);
 };
 
-/**
- * @todo Drive through .env?
- */
-export const getModel = ({ model }: { model?: string } = {}) => {
-  if (process.env.NODE_ENV === 'production') {
-    return getServerModel({ model });
-  } else {
-    return getServerModel({ model });
-    // return getLocalModel(model);
+export const getFallbackModel = () => {
+  const groq = createGroqClient();
+  return groq(GROQ_FALLBACK_MODEL);
+};
+
+export function isModelNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
   }
+
+  const errorObj = error as { message?: string; name?: string; cause?: unknown };
+
+  if (errorObj.name === 'AI_APICallError') {
+    const message = errorObj.message ?? '';
+    if (
+      message.includes('does not exist') ||
+      message.includes('do not have access') ||
+      message.includes('model_not_found') ||
+      message.includes('invalid_model')
+    ) {
+      return true;
+    }
+  }
+
+  if (errorObj.cause && typeof errorObj.cause === 'object') {
+    return isModelNotFoundError(errorObj.cause);
+  }
+
+  return false;
+}
+
+export const getModel = ({ model }: { model?: string } = {}) => {
+  return getServerModel({ model });
 };
