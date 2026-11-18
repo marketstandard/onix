@@ -1,7 +1,8 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { streamText, LanguageModelV1 } from 'ai';
 
-const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-120b';
-const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
+export const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-120b';
+export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
 
 function createGroqClient() {
   return createOpenAI({
@@ -10,15 +11,38 @@ function createGroqClient() {
   });
 }
 
-export const getServerModel = ({ model }: { model?: string }) => {
+export const getServerModel = ({ model }: { model?: string } = {}) => {
   const groq = createGroqClient();
-  return groq(GROQ_PRIMARY_MODEL);
+  const modelId = model || GROQ_PRIMARY_MODEL;
+  return groq(modelId);
 };
 
 export const getFallbackModel = () => {
   const groq = createGroqClient();
   return groq(GROQ_FALLBACK_MODEL);
 };
+
+type StreamTextOptions = Parameters<typeof streamText>[0];
+
+export async function streamTextWithModelFallback(
+  options: StreamTextOptions,
+  fallbackModel: LanguageModelV1,
+): Promise<ReturnType<typeof streamText>> {
+  const primaryResult = streamText(options);
+
+  try {
+    await primaryResult.response;
+    return primaryResult;
+  } catch (error) {
+    if (isModelNotFoundError(error)) {
+      return streamText({
+        ...options,
+        model: fallbackModel,
+      });
+    }
+    throw error;
+  }
+}
 
 export function isModelNotFoundError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
