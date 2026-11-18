@@ -1,8 +1,4 @@
 const mockStreamText = jest.fn();
-const mockStreamResult = {
-  response: Promise.resolve({ headers: {} }),
-  textStream: { getReader: jest.fn() },
-};
 
 jest.mock('ai', () => ({
   streamText: (options: any) => mockStreamText(options),
@@ -21,6 +17,27 @@ import {
   GROQ_PRIMARY_MODEL,
   GROQ_FALLBACK_MODEL,
 } from '../index';
+
+function createMockAsyncIterator<T>(items: T[], errorOnFirst = false, error?: Error) {
+  let index = 0;
+  return {
+    async next() {
+      if (errorOnFirst && index === 0) {
+        throw error;
+      }
+      if (index < items.length) {
+        return { value: items[index++], done: false };
+      }
+      return { value: undefined, done: true };
+    },
+  };
+}
+
+function createMockFullStream<T>(items: T[], errorOnFirst = false, error?: Error) {
+  return {
+    [Symbol.asyncIterator]: () => createMockAsyncIterator(items, errorOnFirst, error),
+  };
+}
 
 describe('AI service', () => {
   describe('model constants', () => {
@@ -160,10 +177,15 @@ describe('AI service', () => {
       mockStreamText.mockReset();
     });
 
-    it('should return primary stream when model is available', async () => {
+    it('should return stream with first chunk when model is available', async () => {
+      const streamParts = [
+        { type: 'text-delta', textDelta: 'Hello' },
+        { type: 'text-delta', textDelta: ' World' },
+      ];
       const successResult = {
+        fullStream: createMockFullStream(streamParts),
+        textStream: 'mock-text-stream',
         response: Promise.resolve({ headers: {} }),
-        textStream: 'mock-stream',
       };
       mockStreamText.mockReturnValue(successResult);
 
@@ -172,21 +194,55 @@ describe('AI service', () => {
 
       const result = await streamTextWithModelFallback(options as any, fallbackModel as any);
 
-      expect(result).toBe(successResult);
       expect(mockStreamText).toHaveBeenCalledTimes(1);
+      expect(result).toBeDefined();
     });
 
-    it('should retry with fallback model on model-not-found error', async () => {
+    it('should forward first chunk before stream completes (real streaming)', async () => {
+      const streamParts = [
+        { type: 'text-delta', textDelta: 'First' },
+        { type: 'text-delta', textDelta: 'Second' },
+        { type: 'text-delta', textDelta: 'Third' },
+      ];
+      const successResult = {
+        fullStream: createMockFullStream(streamParts),
+        textStream: 'mock-text-stream',
+        response: Promise.resolve({ headers: {} }),
+      };
+      mockStreamText.mockReturnValue(successResult);
+
+      const options = { model: getModel(), messages: [] };
+      const fallbackModel = getFallbackModel();
+
+      const result = await streamTextWithModelFallback(options as any, fallbackModel as any);
+
+      const receivedParts: any[] = [];
+      for await (const part of result.fullStream) {
+        receivedParts.push(part);
+        if (receivedParts.length === 1) {
+          expect(part).toEqual({ type: 'text-delta', textDelta: 'First' });
+        }
+      }
+
+      expect(receivedParts).toHaveLength(3);
+      expect(receivedParts[0]).toEqual({ type: 'text-delta', textDelta: 'First' });
+      expect(receivedParts[1]).toEqual({ type: 'text-delta', textDelta: 'Second' });
+      expect(receivedParts[2]).toEqual({ type: 'text-delta', textDelta: 'Third' });
+    });
+
+    it('should retry with fallback model on model-not-found error before any chunks', async () => {
       const modelNotFoundError = {
         name: 'AI_APICallError',
         message: 'The model does not exist or you do not have access to it.',
       };
       const failedResult = {
-        response: Promise.reject(modelNotFoundError),
+        fullStream: createMockFullStream([], true, modelNotFoundError),
       };
+      const fallbackParts = [{ type: 'text-delta', textDelta: 'Fallback response' }];
       const successResult = {
-        response: Promise.resolve({ headers: {} }),
+        fullStream: createMockFullStream(fallbackParts),
         textStream: 'mock-fallback-stream',
+        response: Promise.resolve({ headers: {} }),
       };
 
       mockStreamText
@@ -199,17 +255,17 @@ describe('AI service', () => {
 
       const result = await streamTextWithModelFallback(options as any, fallbackModel as any);
 
-      expect(result).toBe(successResult);
       expect(mockStreamText).toHaveBeenCalledTimes(2);
       expect(mockStreamText).toHaveBeenNthCalledWith(2, expect.objectContaining({
         model: fallbackModel,
       }));
+      expect(result).toBe(successResult);
     });
 
     it('should throw non-model-not-found errors without retry', async () => {
       const networkError = new Error('Network error');
       const failedResult = {
-        response: Promise.reject(networkError),
+        fullStream: createMockFullStream([], true, networkError),
       };
       mockStreamText.mockReturnValue(failedResult);
 
@@ -220,6 +276,23 @@ describe('AI service', () => {
         streamTextWithModelFallback(options as any, fallbackModel as any)
       ).rejects.toThrow('Network error');
 
+      expect(mockStreamText).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle empty streams gracefully', async () => {
+      const successResult = {
+        fullStream: createMockFullStream([]),
+        textStream: 'mock-text-stream',
+        response: Promise.resolve({ headers: {} }),
+      };
+      mockStreamText.mockReturnValue(successResult);
+
+      const options = { model: getModel(), messages: [] };
+      const fallbackModel = getFallbackModel();
+
+      const result = await streamTextWithModelFallback(options as any, fallbackModel as any);
+
+      expect(result).toBe(successResult);
       expect(mockStreamText).toHaveBeenCalledTimes(1);
     });
   });
