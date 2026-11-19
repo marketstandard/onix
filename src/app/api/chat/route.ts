@@ -1,11 +1,16 @@
 import * as ed25519 from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { createDataStreamResponse, generateText, streamText } from 'ai';
+import { createDataStreamResponse, generateText } from 'ai';
 import { auth } from 'auth';
 import { Session } from 'next-auth';
 import { MAX_RESPONSE_TOKENS } from 'constants/app';
-import { getModel, getFallbackModel, isModelNotFoundError } from 'services/server/ai';
+import {
+  getModel,
+  getFallbackModel,
+  isModelNotFoundError,
+  streamTextWithModelFallback,
+} from 'services/server/ai';
 import { getStaticAnchorProvider } from 'services/shared/solana';
 import { debit, hold } from 'services/shared/solana/escrowSol';
 import { countLlmTokens } from 'utils/ai/countLlmTokens';
@@ -93,49 +98,54 @@ export const POST = auth(async (req: Request & { auth: Session }, res) => {
   // Use createDataStreamResponse to handle both the chat response and title generation
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      // Start the main chat response
-      const result = streamText({
-        system: SYSTEM_MESSAGE,
-        model: getModel(),
-        messages,
-        onFinish: async (completion) => {
-          if (billSolana) {
-            const finalTokenCount = countLlmTokens(completion.text);
-            const totalTokens = messageTokens + finalTokenCount;
+      const fallbackModel = getFallbackModel();
 
-            const { holdAccount } = await debit({
-              provider,
-              signer: keypair,
-              amountLlmTokens: totalTokens,
-              holdPda: holdPda,
-            });
+      // Start the main chat response with model fallback support
+      const result = await streamTextWithModelFallback(
+        {
+          system: SYSTEM_MESSAGE,
+          model: getModel(),
+          messages,
+          onFinish: async (completion) => {
+            if (billSolana) {
+              const finalTokenCount = countLlmTokens(completion.text);
+              const totalTokens = messageTokens + finalTokenCount;
 
-            if (holdAccount !== null) throw new Error('Failed to debit and close hold account.');
-          }
-
-          if (isFirstMessage) {
-            let generatedTitle: string | undefined;
-            try {
-              const titleResult = await generateTextWithFallback({
-                model: getModel(),
-                system: `You are a helpful assistant with a single purpose. You are to create simple, human-readables titles for conversations. The title should be short, accurate, and use plain language. The focus shoulld be on the users question, with some slight modification based on the response. You should use at most 6 words. Respond only with the title in plain text (NO MARKDOWN EVER) and nothing else. Don't use quotation marks or put the word "title" in the response. ALWAYS respond with some title and never an empty string. IN THE THREAD ARE THE MESSAGES OF THE CONVERATION THAT SHOULD GIVE A TITLE TO.`,
-                messages: [{ role: 'user', content: `Thread: ${JSON.stringify(messages, null, 2)}` }],
-                maxTokens: 100,
+              const { holdAccount } = await debit({
+                provider,
+                signer: keypair,
+                amountLlmTokens: totalTokens,
+                holdPda: holdPda,
               });
-              generatedTitle = titleResult?.text;
-            } catch {
-              // Title generation failed, will use fallback
+
+              if (holdAccount !== null) throw new Error('Failed to debit and close hold account.');
             }
 
-            const title = sanitizeGeneratedTitle(generatedTitle, messages);
+            if (isFirstMessage) {
+              let generatedTitle: string | undefined;
+              try {
+                const titleResult = await generateTextWithFallback({
+                  model: getModel(),
+                  system: `You are a helpful assistant with a single purpose. You are to create simple, human-readables titles for conversations. The title should be short, accurate, and use plain language. The focus shoulld be on the users question, with some slight modification based on the response. You should use at most 6 words. Respond only with the title in plain text (NO MARKDOWN EVER) and nothing else. Don't use quotation marks or put the word "title" in the response. ALWAYS respond with some title and never an empty string. IN THE THREAD ARE THE MESSAGES OF THE CONVERATION THAT SHOULD GIVE A TITLE TO.`,
+                  messages: [{ role: 'user', content: `Thread: ${JSON.stringify(messages, null, 2)}` }],
+                  maxTokens: 200,
+                });
+                generatedTitle = titleResult?.text;
+              } catch {
+                // Title generation failed, will use fallback
+              }
 
-            dataStream.writeData({
-              type: 'title',
-              title,
-            });
-          }
+              const title = sanitizeGeneratedTitle(generatedTitle, messages);
+
+              dataStream.writeData({
+                type: 'title',
+                title,
+              });
+            }
+          },
         },
-      });
+        fallbackModel,
+      );
 
       // Merge the chat response into the data stream
       result.mergeIntoDataStream(dataStream);

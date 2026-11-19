@@ -1,7 +1,8 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { streamText, LanguageModelV1 } from 'ai';
 
-const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-120b';
-const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
+export const GROQ_PRIMARY_MODEL = 'openai/gpt-oss-120b';
+export const GROQ_FALLBACK_MODEL = 'openai/gpt-oss-20b';
 
 function createGroqClient() {
   return createOpenAI({
@@ -10,15 +11,67 @@ function createGroqClient() {
   });
 }
 
-export const getServerModel = ({ model }: { model?: string }) => {
+export const getServerModel = ({ model }: { model?: string } = {}) => {
   const groq = createGroqClient();
-  return groq(GROQ_PRIMARY_MODEL);
+  const modelId = model || GROQ_PRIMARY_MODEL;
+  return groq(modelId);
 };
 
 export const getFallbackModel = () => {
   const groq = createGroqClient();
   return groq(GROQ_FALLBACK_MODEL);
 };
+
+type StreamTextOptions = Parameters<typeof streamText>[0];
+type StreamTextResult = ReturnType<typeof streamText>;
+
+async function* prependToAsyncIterable<T>(
+  firstItems: T[],
+  rest: AsyncIterable<T>,
+): AsyncIterable<T> {
+  for (const item of firstItems) {
+    yield item;
+  }
+  for await (const item of rest) {
+    yield item;
+  }
+}
+
+export async function streamTextWithModelFallback(
+  options: StreamTextOptions,
+  fallbackModel: LanguageModelV1,
+): Promise<StreamTextResult> {
+  const primaryResult = streamText(options);
+  const fullStreamIterator = primaryResult.fullStream[Symbol.asyncIterator]();
+
+  let firstPart: Awaited<ReturnType<typeof fullStreamIterator.next>>;
+  try {
+    firstPart = await fullStreamIterator.next();
+  } catch (error) {
+    if (isModelNotFoundError(error)) {
+      return streamText({
+        ...options,
+        model: fallbackModel,
+      });
+    }
+    throw error;
+  }
+
+  if (firstPart.done) {
+    return primaryResult;
+  }
+
+  const bufferedParts = [firstPart.value];
+
+  const wrappedFullStream = prependToAsyncIterable(bufferedParts, {
+    [Symbol.asyncIterator]: () => fullStreamIterator,
+  });
+
+  return {
+    ...primaryResult,
+    fullStream: wrappedFullStream as StreamTextResult['fullStream'],
+  };
+}
 
 export function isModelNotFoundError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
